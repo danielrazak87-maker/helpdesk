@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block title %}All Tickets — Admin{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title">All Tickets</h1>
+  <a href="{{ url_for('tickets.create') }}" class="btn btn-primary">+ New Ticket</a>
+</div>
+<div class="card filter-bar">
+  <form method="GET" class="filter-form">
+    <select name="status" class="form-control form-control-sm" onchange="this.form.submit()">
+      <option value="">All Statuses</option>
+      {% for s in statuses %}<option value="{{ s }}" {% if s==status_filter %}selected{% endif %}>{{ s.replace('_',' ').title() }}</option>{% endfor %}
+    </select>
+    <select name="priority" class="form-control form-control-sm" onchange="this.form.submit()">
+      <option value="">All Priorities</option>
+      {% for p in priorities %}<option value="{{ p }}" {% if p==priority_filter %}selected{% endif %}>{{ p.title() }}</option>{% endfor %}
+    </select>
+    <a href="{{ url_for('admin.all_tickets') }}" class="btn btn-ghost btn-sm">Clear</a>
+  </form>
+</div>
+<div class="card">
+  <div class="table-wrap">
+    <table class="table">
+      <thead><tr><th>Ticket #</th><th>Title</th><th>Priority</th><th>Status</th><th>SLA</th><th>Created By</th><th>Assigned To</th><th>Created</th><th></th></tr></thead>
+      <tbody>
+        {% for t in tickets.items %}
+        <tr>
+          <td><span class="ticket-num">{{ t.ticket_number }}</span></td>
+          <td>{{ t.title[:45] }}{% if t.title|length > 45 %}...{% endif %}</td>
+          <td><span class="badge badge-priority-{{ t.priority }}">{{ t.priority.title() }}</span></td>
+          <td><span class="badge badge-status-{{ t.status }}">{{ t.status.replace('_',' ').title() }}</span></td>
+          <td><span class="sla-dot sla-{{ t.sla_status() }}">{% if t.sla_status()=='breached' %}🔴{% elif t.sla_status()=='warning' %}⚠️{% elif t.sla_status()=='resolved' %}✓{% else %}✅{% endif %}</span></td>
+          <td>{{ t.creator.full_name if t.creator else '—' }}</td>
+          <td>{{ t.assignee.full_name if t.assignee else '—' }}</td>
+          <td class="text-muted text-sm">{{ t.created_at.strftime('%d %b %H:%M') }}</td>
+          <td><a href="{{ url_for('tickets.detail', ticket_id=t.id) }}" class="btn btn-ghost btn-xs">View →</a></td>
+        </tr>
+        {% else %}
+        <tr><td colspan="9" class="empty-state">No tickets found.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% if tickets.pages > 1 %}
+  <div class="pagination">
+    {% if tickets.has_prev %}<a href="{{ url_for('admin.all_tickets', page=tickets.prev_num) }}" class="btn btn-ghost btn-sm">← Prev</a>{% endif %}
+    <span class="page-info">Page {{ tickets.page }} of {{ tickets.pages }}</span>
+    {% if tickets.has_next %}<a href="{{ url_for('admin.all_tickets', page=tickets.next_num) }}" class="btn btn-ghost btn-sm">Next →</a>{% endif %}
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

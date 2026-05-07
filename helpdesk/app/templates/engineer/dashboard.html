@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+{% block title %}Engineer Dashboard — HelpDesk Pro{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Engineer Dashboard</h1>
+    <p class="text-muted">Welcome, {{ current_user.full_name }}</p>
+  </div>
+  <!-- Attendance -->
+  <div class="attendance-widget">
+    {% if attendance_today and attendance_today.is_checked_in() %}
+    <div class="attendance-status status-in">● Checked In <span class="text-sm text-muted">{{ attendance_today.check_in.strftime('%H:%M') }}</span></div>
+    <form method="POST" action="{{ url_for('engineer.do_check_out') }}">
+      <button type="submit" class="btn btn-danger btn-sm">Check Out</button>
+    </form>
+    {% elif attendance_today and attendance_today.check_out %}
+    <div class="attendance-status status-done">✓ Done — {{ attendance_today.working_hours() }}h today</div>
+    {% else %}
+    <div class="attendance-status status-out">● Not Checked In</div>
+    <form method="POST" action="{{ url_for('engineer.do_check_in') }}">
+      <button type="submit" class="btn btn-success btn-sm">Check In</button>
+    </form>
+    {% endif %}
+  </div>
+</div>
+
+<!-- KPI Cards -->
+<div class="kpi-grid">
+  <div class="kpi-card kpi-orange">
+    <div class="kpi-icon">🎫</div>
+    <div class="kpi-value">{{ my_open }}</div>
+    <div class="kpi-label">Open Tickets</div>
+  </div>
+  <div class="kpi-card kpi-green">
+    <div class="kpi-icon">✅</div>
+    <div class="kpi-value">{{ my_resolved_today }}</div>
+    <div class="kpi-label">Resolved Today</div>
+  </div>
+  <div class="kpi-card kpi-red">
+    <div class="kpi-icon">🔴</div>
+    <div class="kpi-value">{{ my_breached }}</div>
+    <div class="kpi-label">SLA Breached</div>
+  </div>
+  <div class="kpi-card kpi-teal">
+    <div class="kpi-icon">📅</div>
+    <div class="kpi-value">{{ weekly_attendance|length }}</div>
+    <div class="kpi-label">Days This Week</div>
+  </div>
+</div>
+
+<!-- Assigned Tickets -->
+<div class="card">
+  <div class="card-header">
+    My Assigned Tickets
+    <a href="{{ url_for('tickets.my_tickets') }}" class="btn btn-ghost btn-sm">View All</a>
+  </div>
+  <div class="table-wrap">
+    <table class="table">
+      <thead><tr><th>Ticket #</th><th>Title</th><th>Priority</th><th>Status</th><th>SLA</th><th>Created</th><th></th></tr></thead>
+      <tbody>
+        {% for t in recent %}
+        <tr>
+          <td><span class="ticket-num">{{ t.ticket_number }}</span></td>
+          <td>{{ t.title[:45] }}{% if t.title|length > 45 %}...{% endif %}</td>
+          <td><span class="badge badge-priority-{{ t.priority }}">{{ t.priority.title() }}</span></td>
+          <td><span class="badge badge-status-{{ t.status }}">{{ t.status.replace('_',' ').title() }}</span></td>
+          <td>
+            {% set sla = t.sla_status() %}
+            <span class="sla-dot sla-{{ sla }}">{% if sla=='breached' %}🔴{% elif sla=='warning' %}⚠️{% elif sla=='resolved' %}✓{% else %}✅{% endif %} {{ t.sla_percent() }}%</span>
+          </td>
+          <td class="text-muted text-sm">{{ t.created_at.strftime('%d %b %H:%M') }}</td>
+          <td><a href="{{ url_for('tickets.detail', ticket_id=t.id) }}" class="btn btn-ghost btn-xs">Open →</a></td>
+        </tr>
+        {% else %}
+        <tr><td colspan="7" class="empty-state">No tickets assigned.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

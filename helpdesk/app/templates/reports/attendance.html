@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block title %}Attendance Report — HelpDesk Pro{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title">Attendance Report</h1>
+  <a href="{{ url_for('reports.export_attendance_excel', start=start, end=end) }}" class="btn btn-success btn-sm">⬇ Excel</a>
+</div>
+<div class="card filter-bar">
+  <form method="GET" class="filter-form">
+    <label>From <input type="date" name="start" value="{{ start }}" class="form-control form-control-sm"/></label>
+    <label>To <input type="date" name="end" value="{{ end }}" class="form-control form-control-sm"/></label>
+    <button type="submit" class="btn btn-primary btn-sm">Apply</button>
+  </form>
+</div>
+{% for item in att_data %}
+<div class="card" style="margin-bottom:1rem">
+  <div class="card-header">
+    <strong>{{ item.engineer.full_name }}</strong>
+    <div class="header-badges">
+      <span class="badge badge-success">{{ item.present_days }} days present</span>
+      <span class="badge badge-info">{{ item.total_hours }}h total</span>
+    </div>
+  </div>
+  <div class="table-wrap">
+    <table class="table table-compact">
+      <thead><tr><th>Date</th><th>Status</th><th>Check In</th><th>Check Out</th><th>Hours</th></tr></thead>
+      <tbody>
+        {% for r in item.records %}
+        <tr>
+          <td>{{ r.work_date.strftime('%a %d %b') }}</td>
+          <td><span class="badge badge-attendance-{{ r.status }}">{{ r.status.replace('_',' ').title() }}</span></td>
+          <td>{{ r.check_in.strftime('%H:%M') if r.check_in else '—' }}</td>
+          <td>{{ r.check_out.strftime('%H:%M') if r.check_out else '—' }}</td>
+          <td>{{ r.working_hours() }}h</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="5" class="empty-state">No records in this period.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endfor %}
+{% endblock %}

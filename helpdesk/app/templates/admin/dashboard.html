@@ -1,0 +1,153 @@
+{% extends "base.html" %}
+{% block title %}Admin Dashboard — HelpDesk Pro{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title">Admin Dashboard</h1>
+  <span class="text-muted">Overview of all system activity</span>
+</div>
+
+<!-- KPI Cards -->
+<div class="kpi-grid">
+  <div class="kpi-card kpi-blue">
+    <div class="kpi-icon">🎫</div>
+    <div class="kpi-value">{{ total_tickets }}</div>
+    <div class="kpi-label">Total Tickets</div>
+  </div>
+  <div class="kpi-card kpi-orange">
+    <div class="kpi-icon">🔓</div>
+    <div class="kpi-value">{{ open_tickets }}</div>
+    <div class="kpi-label">Open</div>
+  </div>
+  <div class="kpi-card kpi-yellow">
+    <div class="kpi-icon">⚙️</div>
+    <div class="kpi-value">{{ in_progress }}</div>
+    <div class="kpi-label">In Progress</div>
+  </div>
+  <div class="kpi-card kpi-green">
+    <div class="kpi-icon">✅</div>
+    <div class="kpi-value">{{ resolved }}</div>
+    <div class="kpi-label">Resolved</div>
+  </div>
+  <div class="kpi-card kpi-red">
+    <div class="kpi-icon">🔴</div>
+    <div class="kpi-value">{{ breached }}</div>
+    <div class="kpi-label">SLA Breached</div>
+  </div>
+  <div class="kpi-card kpi-purple">
+    <div class="kpi-icon">👥</div>
+    <div class="kpi-value">{{ total_users }}</div>
+    <div class="kpi-label">Users</div>
+  </div>
+  <div class="kpi-card kpi-teal">
+    <div class="kpi-icon">👷</div>
+    <div class="kpi-value">{{ total_engineers }}</div>
+    <div class="kpi-label">Engineers</div>
+  </div>
+</div>
+
+<!-- Charts Row -->
+<div class="charts-grid">
+  <div class="card">
+    <div class="card-header">Tickets by Priority</div>
+    <div class="card-body"><canvas id="priorityChart" height="200"></canvas></div>
+  </div>
+  <div class="card">
+    <div class="card-header">Tickets by Status</div>
+    <div class="card-body"><canvas id="statusChart" height="200"></canvas></div>
+  </div>
+  <div class="card">
+    <div class="card-header">Engineer Workload</div>
+    <div class="card-body"><canvas id="workloadChart" height="200"></canvas></div>
+  </div>
+</div>
+
+<!-- Recent Tickets -->
+<div class="card">
+  <div class="card-header">
+    Recent Tickets
+    <a href="{{ url_for('admin.all_tickets') }}" class="btn btn-ghost btn-sm">View All</a>
+  </div>
+  <div class="table-wrap">
+    <table class="table">
+      <thead>
+        <tr><th>Ticket #</th><th>Title</th><th>Priority</th><th>Status</th><th>SLA</th><th>Assigned</th><th>Created</th></tr>
+      </thead>
+      <tbody>
+        {% for t in recent_tickets %}
+        <tr>
+          <td><a href="{{ url_for('tickets.detail', ticket_id=t.id) }}" class="ticket-link">{{ t.ticket_number }}</a></td>
+          <td>{{ t.title[:45] }}{% if t.title|length > 45 %}...{% endif %}</td>
+          <td><span class="badge badge-priority-{{ t.priority }}">{{ t.priority.title() }}</span></td>
+          <td><span class="badge badge-status-{{ t.status }}">{{ t.status.replace('_',' ').title() }}</span></td>
+          <td><span class="sla-dot sla-{{ t.sla_status() }}">{% if t.sla_status()=='breached' %}🔴{% elif t.sla_status()=='warning' %}⚠️{% elif t.sla_status()=='resolved' %}✓{% else %}✅{% endif %}</span></td>
+          <td>{{ t.assignee.full_name if t.assignee else '—' }}</td>
+          <td class="text-muted text-sm">{{ t.created_at.strftime('%d %b %H:%M') }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Engineer Workload Table -->
+<div class="card">
+  <div class="card-header">Engineer Workload</div>
+  <div class="table-wrap">
+    <table class="table">
+      <thead><tr><th>Engineer</th><th>Open Tickets</th><th>Workload</th></tr></thead>
+      <tbody>
+        {% for ew in engineer_workload %}
+        <tr>
+          <td>{{ ew.engineer.full_name }}</td>
+          <td><strong>{{ ew.open }}</strong></td>
+          <td>
+            <div class="mini-bar-wrap">
+              <div class="mini-bar" style="width:{{ [ew.open * 10, 100]|min }}%"></div>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+const priorityData = {{ priority_stats | tojson }};
+const statusData = {{ status_stats | default({}) | tojson }};
+const workloadData = {
+  labels: [{% for ew in engineer_workload %}"{{ ew.engineer.full_name }}"{% if not loop.last %},{% endif %}{% endfor %}],
+  values: [{% for ew in engineer_workload %}{{ ew.open }}{% if not loop.last %},{% endif %}{% endfor %}]
+};
+
+const palette = ['#6366f1','#f59e0b','#10b981','#ef4444','#8b5cf6','#06b6d4','#f97316'];
+
+new Chart(document.getElementById('priorityChart'), {
+  type: 'doughnut',
+  data: {
+    labels: Object.keys(priorityData).map(k => k.charAt(0).toUpperCase() + k.slice(1)),
+    datasets: [{ data: Object.values(priorityData), backgroundColor: palette, borderWidth: 0 }]
+  },
+  options: { plugins: { legend: { labels: { color: '#a0aec0' } } } }
+});
+
+new Chart(document.getElementById('statusChart'), {
+  type: 'bar',
+  data: {
+    labels: Object.keys({{ by_status | default({}) | tojson }}).map(k => k.replace('_',' ')),
+    datasets: [{ data: Object.values({{ by_status | default({}) | tojson }}), backgroundColor: palette, borderRadius: 6, borderWidth: 0 }]
+  },
+  options: { plugins: { legend: { display: false } }, scales: { y: { ticks: { color: '#a0aec0' } }, x: { ticks: { color: '#a0aec0' } } } }
+});
+
+new Chart(document.getElementById('workloadChart'), {
+  type: 'bar',
+  data: {
+    labels: workloadData.labels,
+    datasets: [{ data: workloadData.values, backgroundColor: '#6366f1', borderRadius: 6, borderWidth: 0 }]
+  },
+  options: { plugins: { legend: { display: false } }, scales: { y: { ticks: { color: '#a0aec0' } }, x: { ticks: { color: '#a0aec0' } } } }
+});
+</script>
+{% endblock %}

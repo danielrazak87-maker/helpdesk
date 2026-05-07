@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block title %}Engineer Report — HelpDesk Pro{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title">Engineer Performance</h1>
+</div>
+<div class="card filter-bar">
+  <form method="GET" class="filter-form">
+    <label>From <input type="date" name="start" value="{{ start }}" class="form-control form-control-sm"/></label>
+    <label>To <input type="date" name="end" value="{{ end }}" class="form-control form-control-sm"/></label>
+    <button type="submit" class="btn btn-primary btn-sm">Apply</button>
+  </form>
+</div>
+<div class="card">
+  <div class="table-wrap">
+    <table class="table">
+      <thead><tr><th>Engineer</th><th>Total Assigned</th><th>Resolved</th><th>SLA Breached</th><th>Avg Rating</th><th>Resolution Rate</th></tr></thead>
+      <tbody>
+        {% for s in engineer_stats %}
+        <tr>
+          <td><strong>{{ s.engineer.full_name }}</strong><br/><span class="text-muted text-sm">{{ s.engineer.email }}</span></td>
+          <td>{{ s.total }}</td>
+          <td>{{ s.resolved }}</td>
+          <td>{% if s.breached > 0 %}<span class="badge badge-danger">{{ s.breached }}</span>{% else %}<span class="badge badge-success">0</span>{% endif %}</td>
+          <td>{% if s.avg_rating != 'N/A' %}{% for i in range(s.avg_rating|int) %}⭐{% endfor %} ({{ s.avg_rating }}){% else %}—{% endif %}</td>
+          <td>
+            {% set rate = (s.resolved / s.total * 100)|round(1) if s.total > 0 else 0 %}
+            <div class="mini-bar-wrap"><div class="mini-bar" style="width:{{ rate }}%"></div></div>
+            <span class="text-sm">{{ rate }}%</span>
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="6" class="empty-state">No engineer data available.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

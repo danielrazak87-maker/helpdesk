@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>{% block title %}HelpDesk Pro{% endblock %}</title>
+  <meta name="description" content="{% block meta_desc %}Enterprise Helpdesk Ticketing System{% endblock %}"/>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}"/>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+</head>
+<body>
+{% if current_user.is_authenticated %}
+<!-- Sidebar -->
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-brand">
+    <div class="brand-icon">🎯</div>
+    <span class="brand-name">HelpDesk<span class="brand-pro">Pro</span></span>
+  </div>
+  <nav class="sidebar-nav">
+    <div class="nav-section-label">Main</div>
+    <a href="{{ url_for('main.dashboard') }}" class="nav-link {% if request.endpoint == 'main.dashboard' %}active{% endif %}">
+      <span class="nav-icon">🏠</span><span>Dashboard</span>
+    </a>
+    <a href="{{ url_for('tickets.my_tickets') }}" class="nav-link {% if 'tickets' in request.endpoint %}active{% endif %}">
+      <span class="nav-icon">🎫</span><span>Tickets</span>
+    </a>
+    {% if not current_user.is_user() %}
+    <div class="nav-section-label">Reports</div>
+    <a href="{{ url_for('reports.ticket_report') }}" class="nav-link {% if 'reports' in request.endpoint %}active{% endif %}">
+      <span class="nav-icon">📊</span><span>Reports</span>
+    </a>
+    {% endif %}
+    {% if current_user.is_engineer() or current_user.is_admin() %}
+    <a href="{{ url_for('engineer.attendance') }}" class="nav-link {% if 'attendance' in request.endpoint %}active{% endif %}">
+      <span class="nav-icon">🕐</span><span>Attendance</span>
+    </a>
+    {% endif %}
+    {% if current_user.is_admin() %}
+    <div class="nav-section-label">Admin</div>
+    <a href="{{ url_for('admin.dashboard') }}" class="nav-link {% if request.endpoint == 'admin.dashboard' %}active{% endif %}">
+      <span class="nav-icon">⚙️</span><span>Admin Panel</span>
+    </a>
+    <a href="{{ url_for('admin.users') }}" class="nav-link {% if request.endpoint == 'admin.users' %}active{% endif %}">
+      <span class="nav-icon">👥</span><span>Users</span>
+    </a>
+    <a href="{{ url_for('admin.sla_list') }}" class="nav-link {% if 'sla' in request.endpoint %}active{% endif %}">
+      <span class="nav-icon">⏱️</span><span>SLA Policies</span>
+    </a>
+    <a href="{{ url_for('admin.escalation_list') }}" class="nav-link {% if 'escalation' in request.endpoint %}active{% endif %}">
+      <span class="nav-icon">🚨</span><span>Escalation</span>
+    </a>
+    {% endif %}
+  </nav>
+  <div class="sidebar-footer">
+    <a href="{{ url_for('auth.profile') }}" class="sidebar-user">
+      <div class="user-avatar">{{ current_user.full_name[0].upper() }}</div>
+      <div class="user-info">
+        <div class="user-name">{{ current_user.full_name }}</div>
+        <div class="user-role badge-{{ current_user.role }}">{{ current_user.role.title() }}</div>
+      </div>
+    </a>
+  </div>
+</aside>
+
+<!-- Main Content -->
+<div class="main-wrapper">
+  <header class="topbar">
+    <button class="sidebar-toggle" id="sidebarToggle">☰</button>
+    <div class="topbar-search">
+      <input type="text" placeholder="Search tickets..." id="globalSearch" autocomplete="off"/>
+    </div>
+    <div class="topbar-actions">
+      {% if current_user.is_engineer() or current_user.is_admin() %}
+      <a href="{{ url_for('tickets.create') }}" class="btn btn-primary btn-sm">+ New Ticket</a>
+      {% endif %}
+      <!-- Notifications -->
+      <div class="notif-wrapper" id="notifWrapper">
+        <button class="notif-btn" id="notifBtn">
+          🔔
+          {% set unread = current_user.unread_notification_count() %}
+          {% if unread > 0 %}<span class="notif-badge">{{ unread }}</span>{% endif %}
+        </button>
+        <div class="notif-dropdown" id="notifDropdown">
+          <div class="notif-header">
+            <span>Notifications</span>
+            <form method="POST" action="{{ url_for('main.mark_all_read') }}" style="display:inline">
+              <button type="submit" class="btn-link">Mark all read</button>
+            </form>
+          </div>
+          <div class="notif-list">
+            {% for n in current_user.notifications.order_by('created_at desc').limit(8).all() %}
+            <a href="{{ url_for('main.mark_notification_read', nid=n.id) }}"
+               class="notif-item {% if not n.is_read %}unread{% endif %} notif-{{ n.type }}">
+              <div class="notif-title">{{ n.title }}</div>
+              <div class="notif-msg">{{ n.message[:80] }}...</div>
+              <div class="notif-time">{{ n.created_at.strftime('%d %b %H:%M') }}</div>
+            </a>
+            {% else %}
+            <div class="notif-empty">No notifications</div>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+      <a href="{{ url_for('auth.logout') }}" class="btn btn-ghost btn-sm">Logout</a>
+    </div>
+  </header>
+
+  <main class="content">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <div class="flash-container">
+          {% for category, message in messages %}
+          <div class="alert alert-{{ category }}">
+            {{ message }}
+            <button class="alert-close" onclick="this.parentElement.remove()">×</button>
+          </div>
+          {% endfor %}
+        </div>
+      {% endif %}
+    {% endwith %}
+    {% block content %}{% endblock %}
+  </main>
+</div>
+{% else %}
+<main>
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+    <div class="flash-container auth-flash">
+      {% for category, message in messages %}
+      <div class="alert alert-{{ category }}">{{ message }}<button class="alert-close" onclick="this.parentElement.remove()">×</button></div>
+      {% endfor %}
+    </div>
+    {% endif %}
+  {% endwith %}
+  {% block content %}{% endblock %}
+</main>
+{% endif %}
+<script src="{{ url_for('static', filename='js/app.js') }}"></script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

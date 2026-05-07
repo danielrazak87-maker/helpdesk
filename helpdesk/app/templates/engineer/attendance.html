@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block title %}Attendance — HelpDesk Pro{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title">My Attendance</h1>
+  <div class="month-nav">
+    <a href="{{ url_for('engineer.attendance', month=month-1 if month>1 else 12, year=year if month>1 else year-1) }}" class="btn btn-ghost btn-sm">← Prev</a>
+    <span class="month-label">{{ ['','January','February','March','April','May','June','July','August','September','October','November','December'][month] }} {{ year }}</span>
+    <a href="{{ url_for('engineer.attendance', month=month+1 if month<12 else 1, year=year if month<12 else year+1) }}" class="btn btn-ghost btn-sm">Next →</a>
+  </div>
+</div>
+
+<div class="kpi-grid kpi-grid-3">
+  <div class="kpi-card kpi-green"><div class="kpi-icon">📅</div><div class="kpi-value">{{ present_days }}</div><div class="kpi-label">Days Present</div></div>
+  <div class="kpi-card kpi-blue"><div class="kpi-icon">⏰</div><div class="kpi-value">{{ total_hours }}</div><div class="kpi-label">Total Hours</div></div>
+  <div class="kpi-card kpi-purple"><div class="kpi-icon">⌀</div><div class="kpi-value">{{ (total_hours / present_days)|round(1) if present_days else 0 }}</div><div class="kpi-label">Avg Hours/Day</div></div>
+</div>
+
+<div class="card">
+  <div class="table-wrap">
+    <table class="table">
+      <thead><tr><th>Date</th><th>Status</th><th>Check In</th><th>Check Out</th><th>Hours</th><th>Notes</th></tr></thead>
+      <tbody>
+        {% for r in records %}
+        <tr>
+          <td>{{ r.work_date.strftime('%a, %d %b %Y') }}</td>
+          <td><span class="badge badge-attendance-{{ r.status }}">{{ r.status.replace('_',' ').title() }}</span></td>
+          <td>{{ r.check_in.strftime('%H:%M') if r.check_in else '—' }}</td>
+          <td>{{ r.check_out.strftime('%H:%M') if r.check_out else '—' }}</td>
+          <td>{{ r.working_hours() }}h</td>
+          <td class="text-muted text-sm">{{ r.notes or '—' }}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="6" class="empty-state">No attendance records this month.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

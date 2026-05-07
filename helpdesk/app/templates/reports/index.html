@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block title %}Reports — HelpDesk Pro{% endblock %}
+{% block content %}
+<div class="page-header"><h1 class="page-title">Reports</h1></div>
+<div class="reports-grid">
+  <a href="{{ url_for('reports.ticket_report') }}" class="report-card">
+    <div class="report-icon">🎫</div>
+    <div class="report-title">Ticket Report</div>
+    <p>Volume, resolution rates, SLA compliance, CSAT scores by date range.</p>
+  </a>
+  <a href="{{ url_for('reports.engineer_report') }}" class="report-card">
+    <div class="report-icon">👷</div>
+    <div class="report-title">Engineer Performance</div>
+    <p>Tickets handled, avg resolution time, SLA breach rate per engineer.</p>
+  </a>
+  <a href="{{ url_for('reports.attendance_report') }}" class="report-card">
+    <div class="report-icon">🕐</div>
+    <div class="report-title">Attendance Report</div>
+    <p>Check-in/out history, working hours, and presence tracking.</p>
+  </a>
+</div>
+{% endblock %}

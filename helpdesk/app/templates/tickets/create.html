@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block title %}Create Ticket — Kayfalah Helpdesk{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div>
+    <a href="{{ url_for('tickets.my_tickets') }}" class="back-link">← Back</a>
+    <h1 class="page-title">Create New Ticket</h1>
+  </div>
+</div>
+
+<div class="card" style="max-width: 800px;">
+  <div class="card-body">
+    <form method="POST" action="{{ url_for('tickets.create') }}">
+      <div class="form-group">
+        <label for="title" class="required">Title</label>
+        <input type="text" id="title" name="title" class="form-control" required placeholder="Brief summary of the issue">
+      </div>
+      
+      <div class="form-row">
+        <div class="form-group">
+          <label for="category" class="required">Category</label>
+          <select id="category" name="category" class="form-control" required>
+            {% for cat in categories %}
+            <option value="{{ cat }}">{{ cat.replace('_', ' ').title() }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        
+        <div class="form-group">
+          <label for="priority" class="required">Priority</label>
+          <select id="priority" name="priority" class="form-control" required>
+            {% for prio in priorities %}
+            <option value="{{ prio }}">{{ prio.title() }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+      
+      <div class="form-group">
+        <label for="description" class="required">Description</label>
+        <textarea id="description" name="description" class="form-control" rows="8" required placeholder="Detailed description of your issue..."></textarea>
+      </div>
+      
+      <div class="form-actions">
+        <a href="{{ url_for('tickets.my_tickets') }}" class="btn btn-ghost">Cancel</a>
+        <button type="submit" class="btn btn-primary">Submit Ticket</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

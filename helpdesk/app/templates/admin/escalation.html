@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% block title %}Escalation Rules — Admin{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title">Escalation Rules</h1>
+</div>
+<!-- Create Rule Form -->
+<div class="card" style="max-width:700px; margin-bottom:1.5rem">
+  <div class="card-header">Add Escalation Rule</div>
+  <div class="card-body">
+    <form method="POST" action="{{ url_for('admin.create_escalation') }}">
+      <div class="form-row">
+        <div class="form-group">
+          <label>SLA Policy</label>
+          <select name="sla_policy_id" class="form-control" required>
+            {% for p in policies %}<option value="{{ p.id }}">{{ p.name }}</option>{% endfor %}
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Level</label>
+          <select name="escalation_level" class="form-control">
+            <option value="1">Level 1</option><option value="2">Level 2</option><option value="3">Level 3</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Escalate To</label>
+          <select name="escalate_to" class="form-control" required>
+            {% for e in engineers %}<option value="{{ e.id }}">{{ e.full_name }} ({{ e.role.title() }})</option>{% endfor %}
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Trigger After (minutes)</label>
+          <input type="number" name="trigger_after_mins" class="form-control" value="60" min="1" required/>
+        </div>
+      </div>
+      <button type="submit" class="btn btn-primary">Add Rule</button>
+    </form>
+  </div>
+</div>
+<!-- Rules Table -->
+<div class="card">
+  <div class="table-wrap">
+    <table class="table">
+      <thead><tr><th>SLA Policy</th><th>Level</th><th>Escalate To</th><th>Trigger After</th><th></th></tr></thead>
+      <tbody>
+        {% for r in rules %}
+        <tr>
+          <td>{{ r.sla_policy.name }}</td>
+          <td><span class="badge badge-level-{{ r.escalation_level }}">Level {{ r.escalation_level }}</span></td>
+          <td>{{ r.escalation_target.full_name }} ({{ r.escalation_target.role.title() }})</td>
+          <td>{{ r.trigger_after_mins }} min</td>
+          <td>
+            <form method="POST" action="{{ url_for('admin.delete_escalation', rule_id=r.id) }}" style="display:inline">
+              <button type="submit" class="btn btn-danger btn-xs" onclick="return confirm('Delete this rule?')">Delete</button>
+            </form>
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="5" class="empty-state">No escalation rules defined.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

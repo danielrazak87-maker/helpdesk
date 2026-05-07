@@ -1,0 +1,220 @@
+{% extends "base.html" %}
+{% block title %}{{ ticket.ticket_number }} — HelpDesk Pro{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div>
+    <a href="{{ url_for('tickets.my_tickets') }}" class="back-link">← Back to Tickets</a>
+    <h1 class="page-title">{{ ticket.ticket_number }}: {{ ticket.title }}</h1>
+  </div>
+  <span class="badge badge-status-{{ ticket.status }} badge-lg">{{ ticket.status.replace('_',' ').title() }}</span>
+</div>
+
+<div class="ticket-detail-grid">
+  <!-- Left: Main Info -->
+  <div class="ticket-main">
+    <!-- Description -->
+    <div class="card">
+      <div class="card-header">Description</div>
+      <div class="card-body">
+        <p class="ticket-description">{{ ticket.description }}</p>
+        {% if ticket.attachment %}
+        <div class="attachment-row">
+          📎 <a href="{{ url_for('static', filename='uploads/' + ticket.attachment) }}" target="_blank">{{ ticket.attachment }}</a>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Comments -->
+    <div class="card">
+      <div class="card-header">
+        Activity & Comments
+        <span class="badge-count">{{ comments|length }}</span>
+      </div>
+      <div class="card-body comments-wrap">
+        {% for c in comments %}
+        <div class="comment {% if c.is_internal %}comment-internal{% endif %}">
+          <div class="comment-avatar">{{ c.author.full_name[0].upper() }}</div>
+          <div class="comment-body">
+            <div class="comment-meta">
+              <strong>{{ c.author.full_name }}</strong>
+              <span class="text-muted text-sm">{{ c.created_at.strftime('%d %b %Y %H:%M') }}</span>
+              {% if c.is_internal %}<span class="badge badge-internal">Internal Note</span>{% endif %}
+            </div>
+            <div class="comment-content">{{ c.content }}</div>
+          </div>
+        </div>
+        {% else %}
+        <p class="text-muted">No comments yet.</p>
+        {% endfor %}
+      </div>
+      <!-- Add Comment -->
+      {% if ticket.status not in ['closed'] %}
+      <div class="card-footer">
+        <form method="POST" action="{{ url_for('tickets.add_comment', ticket_id=ticket.id) }}">
+          <textarea name="content" class="form-control" rows="3" placeholder="Write a comment..." required></textarea>
+          {% if not current_user.is_user() %}
+          <label class="checkbox-label" style="margin-top:.5rem">
+            <input type="checkbox" name="is_internal"/> Internal note (hidden from user)
+          </label>
+          {% endif %}
+          <button type="submit" class="btn btn-primary" style="margin-top:.75rem">Post Comment</button>
+        </form>
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- Rating -->
+    {% if ticket.status in ['resolved','closed'] and ticket.created_by == current_user.id and not ticket.rating %}
+    <div class="card card-highlight">
+      <div class="card-header">⭐ Rate Your Experience</div>
+      <div class="card-body">
+        <form method="POST" action="{{ url_for('tickets.rate_ticket', ticket_id=ticket.id) }}">
+          <div class="star-rating" id="starRating">
+            {% for i in range(1,6) %}
+            <span class="star" data-val="{{ i }}">★</span>
+            {% endfor %}
+          </div>
+          <input type="hidden" name="rating" id="ratingInput"/>
+          <textarea name="feedback" class="form-control" rows="2" placeholder="Optional feedback..." style="margin-top:.5rem"></textarea>
+          <button type="submit" class="btn btn-primary" style="margin-top:.75rem">Submit Rating</button>
+        </form>
+      </div>
+    </div>
+    {% elif ticket.rating %}
+    <div class="card">
+      <div class="card-header">User Rating</div>
+      <div class="card-body">
+        <div class="rating-display">
+          {% for i in range(1,6) %}<span class="star {% if i <= ticket.rating %}active{% endif %}">★</span>{% endfor %}
+          <span class="text-muted">({{ ticket.rating }}/5)</span>
+        </div>
+        {% if ticket.feedback %}<p style="margin-top:.5rem">{{ ticket.feedback }}</p>{% endif %}
+      </div>
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- Right: Sidebar -->
+  <div class="ticket-sidebar">
+    <!-- SLA Card -->
+    <div class="card sla-card sla-card-{{ ticket.sla_status() }}">
+      <div class="card-header">⏱️ SLA Status</div>
+      <div class="card-body">
+        <div class="sla-status-label">{{ ticket.sla_status().replace('_',' ').title() }}</div>
+        <div class="sla-bar-wrap">
+          <div class="sla-bar" style="width:{{ ticket.sla_percent() }}%"></div>
+        </div>
+        <div class="sla-info">
+          <span>{{ ticket.sla_percent() }}% elapsed</span>
+          {% if ticket.sla_remaining_mins() is not none and ticket.status not in ['resolved','closed'] %}
+          {% set rem = ticket.sla_remaining_mins() %}
+          <span>{% if rem < 0 %}Overdue by {{ (-rem)//60 }}h {{ (-rem)%60 }}m{% else %}{{ rem//60 }}h {{ rem%60 }}m left{% endif %}</span>
+          {% endif %}
+        </div>
+        {% if ticket.sla_resolution_due %}
+        <div class="text-muted text-sm" style="margin-top:.5rem">Due: {{ ticket.sla_resolution_due.strftime('%d %b %Y %H:%M') }}</div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Details -->
+    <div class="card">
+      <div class="card-header">Ticket Details</div>
+      <div class="card-body detail-list">
+        <div class="detail-row"><span>Priority</span><span class="badge badge-priority-{{ ticket.priority }}">{{ ticket.priority.title() }}</span></div>
+        <div class="detail-row"><span>Category</span><span>{{ ticket.category.title() }}</span></div>
+        <div class="detail-row"><span>Created</span><span>{{ ticket.created_at.strftime('%d %b %Y %H:%M') }}</span></div>
+        <div class="detail-row"><span>Reported by</span><span>{{ ticket.creator.full_name if ticket.creator else 'N/A' }}</span></div>
+        <div class="detail-row"><span>Assigned to</span>
+          <span>{{ ticket.assignee.full_name if ticket.assignee else 'Unassigned' }}</span>
+        </div>
+        {% if ticket.resolved_at %}
+        <div class="detail-row"><span>Resolved</span><span>{{ ticket.resolved_at.strftime('%d %b %Y %H:%M') }}</span></div>
+        <div class="detail-row"><span>Resolution Time</span><span>{{ (ticket.resolution_time_mins() // 60) }}h {{ (ticket.resolution_time_mins() % 60) }}m</span></div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Actions (Engineer/Admin) -->
+    {% if not current_user.is_user() %}
+    <div class="card">
+      <div class="card-header">Update Ticket</div>
+      <div class="card-body">
+        <form method="POST" action="{{ url_for('tickets.update', ticket_id=ticket.id) }}">
+          <div class="form-group">
+            <label>Status</label>
+            <select name="status" class="form-control">
+              {% for s in statuses %}
+              <option value="{{ s }}" {% if s == ticket.status %}selected{% endif %}>{{ s.replace('_',' ').title() }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          {% if engineers %}
+          <div class="form-group">
+            <label>Assign To</label>
+            <select name="assigned_to" class="form-control">
+              <option value="">Unassigned</option>
+              {% for eng in engineers %}
+              <option value="{{ eng.id }}" {% if ticket.assigned_to == eng.id %}selected{% endif %}>{{ eng.full_name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          {% endif %}
+          <button type="submit" class="btn btn-primary btn-full">Update</button>
+        </form>
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- Escalation History -->
+    {% if escalations %}
+    <div class="card">
+      <div class="card-header">🚨 Escalation History</div>
+      <div class="card-body">
+        {% for esc in escalations %}
+        <div class="escalation-item">
+          <div class="esc-level">Level {{ esc.escalation_level }}</div>
+          <div class="esc-to">→ {{ esc.target_user.full_name }}</div>
+          <div class="text-muted text-sm">{{ esc.created_at.strftime('%d %b %H:%M') }}</div>
+          <div class="text-muted text-sm">{{ esc.reason }}</div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- Audit History -->
+    {% if not current_user.is_user() and history %}
+    <div class="card">
+      <div class="card-header">Audit Trail</div>
+      <div class="card-body">
+        {% for h in history[:8] %}
+        <div class="history-item">
+          <span class="history-field">{{ h.field_changed }}</span>:
+          <span class="history-old">{{ h.old_value or 'None' }}</span> →
+          <span class="history-new">{{ h.new_value }}</span>
+          <div class="text-muted text-sm">by {{ h.changer.full_name }} · {{ h.created_at.strftime('%d %b %H:%M') }}</div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+// Star rating
+const stars = document.querySelectorAll('#starRating .star');
+const input = document.getElementById('ratingInput');
+stars.forEach((star, i) => {
+  star.addEventListener('click', () => {
+    input.value = i + 1;
+    stars.forEach((s, j) => s.classList.toggle('active', j <= i));
+  });
+  star.addEventListener('mouseover', () => stars.forEach((s, j) => s.classList.toggle('hover', j <= i)));
+  star.addEventListener('mouseout', () => stars.forEach(s => s.classList.remove('hover')));
+});
+</script>
+{% endblock %}

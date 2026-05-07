@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block title %}SLA Policies — Admin{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title">SLA Policies</h1>
+  <a href="{{ url_for('admin.create_sla') }}" class="btn btn-primary">+ Add Policy</a>
+</div>
+<div class="card">
+  <div class="table-wrap">
+    <table class="table">
+      <thead><tr><th>Name</th><th>Priority</th><th>Response Time</th><th>Resolution Time</th><th>Escalate on Breach</th><th>Actions</th></tr></thead>
+      <tbody>
+        {% for p in policies %}
+        <tr>
+          <td><strong>{{ p.name }}</strong></td>
+          <td><span class="badge badge-priority-{{ p.priority }}">{{ p.priority.title() }}</span></td>
+          <td>{{ p.response_time_mins }} min ({{ p.response_hours() }}h)</td>
+          <td>{{ p.resolution_time_mins }} min ({{ p.resolution_hours() }}h)</td>
+          <td>{% if p.escalate_on_breach %}<span class="badge badge-success">Yes</span>{% else %}<span class="badge badge-muted">No</span>{% endif %}</td>
+          <td><a href="{{ url_for('admin.edit_sla', policy_id=p.id) }}" class="btn btn-ghost btn-xs">Edit</a></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
