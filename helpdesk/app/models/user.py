@@ -13,6 +13,7 @@ class User(UserMixin, db.Model):
     full_name = db.Column(db.String(150), nullable=False)
     role = db.Column(db.String(20), nullable=False, default='user')  # admin, engineer, user
     department = db.Column(db.String(100))
+    project = db.Column(db.String(100))
     phone = db.Column(db.String(30))
     avatar = db.Column(db.String(200))
     is_active = db.Column(db.Boolean, default=True)
@@ -43,6 +44,10 @@ class User(UserMixin, db.Model):
 
     def unread_notification_count(self):
         return self.notifications.filter_by(is_read=False).count()
+
+    def recent_notifications(self, limit=8):
+        from app.models.notification import Notification
+        return self.notifications.order_by(Notification.created_at.desc()).limit(limit).all()
 
     def __repr__(self):
         return f'<User {self.email}>'

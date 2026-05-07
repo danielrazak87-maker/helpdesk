@@ -62,3 +62,40 @@ def profile():
         return redirect(url_for('auth.profile'))
 
     return render_template('auth/profile.html')
+
+
+@auth_bp.route('/register', methods=['GET', 'POST'])
+def register():
+    if current_user.is_authenticated:
+        return redirect(url_for('main.dashboard'))
+
+    if request.method == 'POST':
+        email = request.form.get('email', '').strip().lower()
+        password = request.form.get('password', '')
+        full_name = request.form.get('full_name', '')
+        project = request.form.get('project', '')
+
+        if not email or not password or not full_name or not project:
+            flash('All fields are required.', 'danger')
+            return render_template('auth/register.html')
+
+        existing = User.query.filter_by(email=email).first()
+        if existing:
+            flash('Email already registered.', 'warning')
+            return render_template('auth/register.html')
+
+        user = User(
+            email=email,
+            full_name=full_name,
+            project=project,
+            role='user'
+        )
+        user.set_password(password)
+        db.session.add(user)
+        db.session.commit()
+
+        login_user(user)
+        flash('Registration successful!', 'success')
+        return redirect(url_for('main.dashboard'))
+
+    return render_template('auth/register.html')

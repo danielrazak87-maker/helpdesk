@@ -34,7 +34,7 @@ def my_tickets():
     elif current_user.is_engineer():
         query = Ticket.query.filter_by(assigned_to=current_user.id)
     else:
-        query = Ticket.query.filter_by(created_by=current_user.id)
+        query = Ticket.query.filter_by(project=current_user.project)
 
     if status_filter:
         query = query.filter_by(status=status_filter)
@@ -69,6 +69,7 @@ def create():
             description=description,
             priority=priority,
             category=category,
+            project=current_user.project,
             created_by=current_user.id,
             status='open'
         )
@@ -215,7 +216,7 @@ def _check_access(ticket):
         return
     if current_user.is_engineer() and ticket.assigned_to == current_user.id:
         return
-    if current_user.is_user() and ticket.created_by == current_user.id:
+    if current_user.is_user() and ticket.project == current_user.project:
         return
     abort(403)
 

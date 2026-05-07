@@ -1,11 +1,10 @@
 {% extends "base.html" %}
-{% block title %}Login — HelpDesk Pro{% endblock %}
+{% block title %}Login — Kayfalah Helpdesk{% endblock %}
 {% block content %}
 <div class="auth-page">
   <div class="auth-card">
     <div class="auth-logo">
-      <div class="auth-logo-icon">🎯</div>
-      <h1>HelpDesk<span class="brand-pro">Pro</span></h1>
+      <img src="{{ url_for('static', filename='img/kf-logo.webp') }}" alt="KF Logo" style="max-height: 160px; margin-bottom: 1.5rem;" />
       <p>Sign in to your account</p>
     </div>
     <form method="POST" action="{{ url_for('auth.login') }}" id="loginForm">
@@ -30,9 +29,13 @@
       <button type="submit" class="btn btn-primary btn-full" id="loginBtn">
         Sign In
       </button>
+      <div style="text-align: center; margin-top: 1rem;">
+        <p style="margin-bottom: 0.5rem; color: var(--text-muted);">Don't have an account?</p>
+        <a href="{{ url_for('auth.register') }}" class="btn btn-ghost btn-full">Register as End User</a>
+      </div>
     </form>
     <div class="auth-footer">
-      <p>HelpDesk Pro &copy; {{ now.year if now else 2026 }}</p>
+      Developed by Kay Falah Digital Sdn. Bhd. &copy; 2026
     </div>
   </div>
   <div class="auth-bg">

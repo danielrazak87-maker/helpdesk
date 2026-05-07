@@ -3,12 +3,19 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>{% block title %}HelpDesk Pro{% endblock %}</title>
+  <title>{% block title %}Kayfalah Helpdesk{% endblock %}</title>
   <meta name="description" content="{% block meta_desc %}Enterprise Helpdesk Ticketing System{% endblock %}"/>
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
   <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}"/>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script>
+    // Theme initialization
+    const savedTheme = localStorage.getItem('theme') || 'dark';
+    if (savedTheme === 'light') {
+      document.documentElement.classList.add('light-theme');
+    }
+  </script>
 </head>
 <body>
 {% if current_user.is_authenticated %}
@@ -16,7 +23,7 @@
 <aside class="sidebar" id="sidebar">
   <div class="sidebar-brand">
     <div class="brand-icon">🎯</div>
-    <span class="brand-name">HelpDesk<span class="brand-pro">Pro</span></span>
+    <span class="brand-name">Kayfalah <span class="brand-pro">Helpdesk</span></span>
   </div>
   <nav class="sidebar-nav">
     <div class="nav-section-label">Main</div>
@@ -75,6 +82,10 @@
       {% if current_user.is_engineer() or current_user.is_admin() %}
       <a href="{{ url_for('tickets.create') }}" class="btn btn-primary btn-sm">+ New Ticket</a>
       {% endif %}
+      <!-- Theme Toggle -->
+      <button class="notif-btn" id="themeToggleBtn" title="Toggle Theme">
+        🌓
+      </button>
       <!-- Notifications -->
       <div class="notif-wrapper" id="notifWrapper">
         <button class="notif-btn" id="notifBtn">
@@ -90,7 +101,7 @@
             </form>
           </div>
           <div class="notif-list">
-            {% for n in current_user.notifications.order_by('created_at desc').limit(8).all() %}
+            {% for n in current_user.recent_notifications() %}
             <a href="{{ url_for('main.mark_notification_read', nid=n.id) }}"
                class="notif-item {% if not n.is_read %}unread{% endif %} notif-{{ n.type }}">
               <div class="notif-title">{{ n.title }}</div>
@@ -106,11 +117,12 @@
       <a href="{{ url_for('auth.logout') }}" class="btn btn-ghost btn-sm">Logout</a>
     </div>
   </header>
+{% endif %}
 
-  <main class="content">
+  <main class="{% if current_user.is_authenticated %}content{% endif %}">
     {% with messages = get_flashed_messages(with_categories=true) %}
       {% if messages %}
-        <div class="flash-container">
+        <div class="flash-container {% if not current_user.is_authenticated %}auth-flash{% endif %}">
           {% for category, message in messages %}
           <div class="alert alert-{{ category }}">
             {{ message }}
@@ -122,22 +134,23 @@
     {% endwith %}
     {% block content %}{% endblock %}
   </main>
+
+{% if current_user.is_authenticated %}
 </div>
-{% else %}
-<main>
-  {% with messages = get_flashed_messages(with_categories=true) %}
-    {% if messages %}
-    <div class="flash-container auth-flash">
-      {% for category, message in messages %}
-      <div class="alert alert-{{ category }}">{{ message }}<button class="alert-close" onclick="this.parentElement.remove()">×</button></div>
-      {% endfor %}
-    </div>
-    {% endif %}
-  {% endwith %}
-  {% block content %}{% endblock %}
-</main>
 {% endif %}
 <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+<script>
+  // Theme toggle listener
+  const themeToggleBtn = document.getElementById('themeToggleBtn');
+  if (themeToggleBtn) {
+    themeToggleBtn.addEventListener('click', () => {
+      const root = document.documentElement;
+      root.classList.toggle('light-theme');
+      const isLight = root.classList.contains('light-theme');
+      localStorage.setItem('theme', isLight ? 'light' : 'dark');
+    });
+  }
+</script>
 {% block scripts %}{% endblock %}
 </body>
 </html>

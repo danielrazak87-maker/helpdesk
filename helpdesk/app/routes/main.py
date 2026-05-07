@@ -10,7 +10,6 @@ main_bp = Blueprint('main', __name__)
 
 @main_bp.route('/')
 def index():
-    from flask_login import current_user
     if current_user.is_authenticated:
         return redirect(url_for('main.dashboard'))
     return redirect(url_for('auth.login'))
