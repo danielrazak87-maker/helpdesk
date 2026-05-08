@@ -1,8 +1,11 @@
+from __future__ import annotations
+
 from flask import Blueprint, render_template, request, send_file, abort
 from flask_login import login_required, current_user
 from functools import wraps
 from datetime import date, datetime, timedelta
 from sqlalchemy import func
+from typing import Any, Callable
 import io
 from app import db
 from app.models.ticket import Ticket
@@ -12,9 +15,9 @@ from app.models.attendance import Attendance
 reports_bp = Blueprint('reports', __name__)
 
 
-def admin_or_engineer(f):
+def admin_or_engineer(f: Callable[..., Any]) -> Callable[..., Any]:
     @wraps(f)
-    def decorated(*args, **kwargs):
+    def decorated(*args: Any, **kwargs: Any) -> Any:
         if not current_user.is_authenticated or current_user.is_user():
             abort(403)
         return f(*args, **kwargs)
@@ -24,14 +27,14 @@ def admin_or_engineer(f):
 @reports_bp.route('/')
 @login_required
 @admin_or_engineer
-def index():
+def index() -> str:
     return render_template('reports/index.html')
 
 
 @reports_bp.route('/tickets')
 @login_required
 @admin_or_engineer
-def ticket_report():
+def ticket_report() -> str:
     start = request.args.get('start', (date.today() - timedelta(days=30)).isoformat())
     end = request.args.get('end', date.today().isoformat())
     start_dt = datetime.fromisoformat(start)
@@ -77,7 +80,7 @@ def ticket_report():
 @reports_bp.route('/engineers')
 @login_required
 @admin_or_engineer
-def engineer_report():
+def engineer_report() -> str:
     start = request.args.get('start', (date.today() - timedelta(days=30)).isoformat())
     end = request.args.get('end', date.today().isoformat())
     start_dt = datetime.fromisoformat(start)
@@ -109,7 +112,7 @@ def engineer_report():
 @reports_bp.route('/attendance')
 @login_required
 @admin_or_engineer
-def attendance_report():
+def attendance_report() -> str:
     start = request.args.get('start', (date.today() - timedelta(days=30)).isoformat())
     end = request.args.get('end', date.today().isoformat())
     start_date = date.fromisoformat(start)

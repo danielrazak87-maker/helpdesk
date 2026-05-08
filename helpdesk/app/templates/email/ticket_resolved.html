@@ -2,15 +2,15 @@
 {% block email_content %}
 <h2>✅ Ticket Resolved</h2>
 <p>Hello <strong>{{ user.full_name }}</strong>,</p>
-<p>Your ticket has been marked as <strong>resolved</strong> by our support team.</p>
+<p>Your support ticket has been marked as <strong>resolved</strong> by our team. We hope the solution meets your expectations.</p>
 
 <div class="detail-box">
   <dl>
-    <dt>Ticket Number</dt>
+    <dt>🎫 Ticket Number</dt>
     <dd>{{ ticket.ticket_number }}</dd>
-    <dt>Title</dt>
+    <dt>📋 Title</dt>
     <dd>{{ ticket.title }}</dd>
-    <dt>Resolution Time</dt>
+    <dt>⏱️ Resolution Time</dt>
     <dd>
       {% if ticket.resolution_time_mins() %}
         {{ (ticket.resolution_time_mins() // 60) }}h {{ (ticket.resolution_time_mins() % 60) }}m
@@ -21,8 +21,8 @@
   </dl>
 </div>
 
-<p>We'd love your feedback! Please rate your experience:</p>
-<a href="{{ ticket_url }}" class="email-btn">Rate Your Experience</a>
+<p>We value your feedback! Let us know how we did:</p>
+<a href="{{ ticket_url }}" class="email-btn">⭐ Rate Your Experience</a>
 
 <p class="email-note">
   If the button doesn't work, copy and paste this link into your browser:<br/>

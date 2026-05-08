@@ -1,5 +1,5 @@
-from datetime import datetime, timedelta
-from app import db
+from datetime import datetime, timedelta, timezone
+from app import db, utcnow
 from app.models.ticket import Ticket
 from app.models.sla import SLAPolicy
 
@@ -21,7 +21,7 @@ def check_and_update_sla(ticket: Ticket):
     if ticket.status in ['resolved', 'closed']:
         return False
 
-    if ticket.sla_resolution_due and datetime.utcnow() > ticket.sla_resolution_due:
+    if ticket.sla_resolution_due and utcnow() > ticket.sla_resolution_due:
         if not ticket.sla_breached:
             ticket.sla_breached = True
             db.session.commit()

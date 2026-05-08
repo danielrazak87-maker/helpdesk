@@ -3,12 +3,25 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="color-scheme" content="light dark"/>
+  <meta name="supported-color-schemes" content="light dark"/>
   <style>
+    :root { color-scheme: light dark; }
     body { margin: 0; padding: 0; background: #f4f5f7; font-family: 'Segoe UI', Arial, sans-serif; }
-    .email-wrap { max-width: 600px; margin: 0 auto; background: #ffffff; }
-    .email-header { background: linear-gradient(135deg, #121029, #1C183E); padding: 2rem; text-align: center; }
-    .email-header h1 { color: #EC8305; margin: 0; font-size: 1.5rem; font-weight: 700; }
-    .email-header .sub { color: #A09CBF; font-size: 0.8rem; margin-top: .25rem; }
+    .email-wrap { max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 2px 12px rgba(0,0,0,.08); }
+    .email-header { background: linear-gradient(135deg, #121029, #1C183E); padding: 2rem; text-align: center; position: relative; overflow: hidden; }
+    .email-header::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(ellipse at 30% 50%, rgba(236,131,5,.08) 0%, transparent 60%);
+      pointer-events: none;
+    }
+    .email-header-content { position: relative; z-index: 1; }
+    .email-logo { display: flex; align-items: center; justify-content: center; gap: .75rem; margin-bottom: .25rem; }
+    .email-logo-img { width: 36px; height: 36px; border: 0; }
+    .email-header h1 { color: #EC8305; margin: 0; font-size: 1.65rem; font-weight: 800; letter-spacing: -.5px; }
+    .email-header .sub { color: #A09CBF; font-size: .85rem; margin-top: .25rem; letter-spacing: .02em; }
     .email-body { padding: 2rem; color: #1f2937; }
     .email-body h2 { color: #121029; font-size: 1.25rem; margin: 0 0 1rem; }
     .email-body p { line-height: 1.6; margin: 0 0 1rem; color: #4b5563; }
@@ -17,23 +30,45 @@
     .email-body .detail-box dd { margin: 0 0 .75rem; font-weight: 600; color: #111827; }
     .email-body .detail-box dd:last-child { margin-bottom: 0; }
     .email-btn { display: inline-block; background: #EC8305; color: #ffffff !important; text-decoration: none; padding: .75rem 1.5rem; border-radius: 8px; font-weight: 600; margin: 1rem 0; }
-    .email-btn:hover { background: #D47604; }
-    .email-footer { padding: 1.5rem 2rem; border-top: 1px solid #e5e7eb; font-size: .75rem; color: #9ca3af; text-align: center; }
+    .email-body .priority-critical { background: #fef2f2; color: #dc2626; }
+    .email-body .priority-high { background: #fff7ed; color: #ea580c; }
+    .email-body .priority-medium { background: #fefce8; color: #ca8a04; }
+    .email-body .priority-low { background: #f0fdf4; color: #16a34a; }
+    .email-footer { padding: 1.5rem 2rem; border-top: 1px solid #e5e7eb; font-size: .75rem; color: #9ca3af; text-align: center; background: #fafafa; }
     .email-footer a { color: #EC8305; text-decoration: none; }
+    .email-footer .footer-brand { font-weight: 700; color: #121029; }
     .email-note { font-size: .8rem; color: #9ca3af; margin-top: 1.5rem; border-top: 1px solid #e5e7eb; padding-top: 1rem; }
+    .email-badge { display: inline-block; background: rgba(236,131,5,.1); color: #EC8305; font-size: .7rem; font-weight: 600; padding: .15rem .5rem; border-radius: 4px; text-transform: uppercase; letter-spacing: .03em; }
+    @media (prefers-color-scheme: dark) {
+      body { background: #1a1a2e; }
+      .email-wrap { background: #1e1e3a; }
+      .email-body { color: #e2e8f0; }
+      .email-body h2 { color: #EC8305; }
+      .email-body p { color: #cbd5e1; }
+      .email-body .detail-box { background: #2a2a4a; border-color: #3a3a5a; }
+      .email-body .detail-box dd { color: #e2e8f0; }
+      .email-footer { background: #151528; border-color: #3a3a5a; color: #6b7280; }
+      .email-footer .footer-brand { color: #e2e8f0; }
+    }
   </style>
 </head>
 <body>
   <div class="email-wrap">
     <div class="email-header">
-      <h1>🎯 Kayfalah Helpdesk</h1>
-      <div class="sub">Enterprise Support Made Simple</div>
+      <div class="email-header-content">
+        <div class="email-logo">
+          <img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAzMiAzMiI+PHJlY3Qgd2lkdGg9IjMyIiBoZWlnaHQ9IjMyIiByeD0iNiIgZmlsbD0iI0VDODMwNSIvPjx0ZXh0IHg9IjE2IiB5PSIyMiIgZm9udC1mYW1pbHk9IkFyaWFsLCBzYW5zLXNlcmlmIiBmb250LXdlaWdodD0iODAwIiBmb250LXNpemU9IjIwIiBmaWxsPSIjZmZmIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIj5LRjwvdGV4dD48L3N2Zz4=" alt="KF" class="email-logo-img"/>
+          <h1>KF Helpdesk</h1>
+        </div>
+        <div class="sub">Integrated Enterprise Support Platform</div>
+      </div>
     </div>
     <div class="email-body">
       {% block email_content %}{% endblock %}
     </div>
     <div class="email-footer">
-      Developed by <a href="https://kayfalah.com">Kay Falah Digital Sdn. Bhd.</a><br/>
+      <span class="footer-brand">Kay Falah Digital Sdn. Bhd.</span><br/>
+      Integrated Helpdesk Platform &bull; <a href="https://kayfalah.com">kayfalah.com</a><br/>
       &copy; 2026 Kay Falah Digital. All rights reserved.
     </div>
   </div>

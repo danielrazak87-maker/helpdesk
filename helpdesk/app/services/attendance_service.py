@@ -1,19 +1,26 @@
-from datetime import datetime, date
+from __future__ import annotations
+
+from datetime import datetime, date, timezone
+from typing import Optional, Tuple
 from app import db
+
+
+def _utcnow() -> datetime:
+    return datetime.now(timezone.utc).replace(tzinfo=None)
 from app.models.attendance import Attendance
 from app.models.user import User
 
 
-def check_in(engineer_id):
-    """Record check-in for today."""
+def check_in(engineer_id: int) -> Tuple[Optional[Attendance], Optional[str]]:
+    """Record check-in for today. Returns (record, error)."""
     today = date.today()
-    record = Attendance.query.filter_by(engineer_id=engineer_id, work_date=today).first()
+    record: Attendance | None = Attendance.query.filter_by(engineer_id=engineer_id, work_date=today).first()
     if record:
         return None, 'Already checked in today.'
     record = Attendance(
         engineer_id=engineer_id,
         work_date=today,
-        check_in=datetime.utcnow(),
+        check_in=_utcnow(),
         status='present'
     )
     db.session.add(record)
@@ -21,20 +28,20 @@ def check_in(engineer_id):
     return record, None
 
 
-def check_out(engineer_id):
-    """Record check-out for today."""
+def check_out(engineer_id: int) -> Tuple[Optional[Attendance], Optional[str]]:
+    """Record check-out for today. Returns (record, error)."""
     today = date.today()
-    record = Attendance.query.filter_by(engineer_id=engineer_id, work_date=today).first()
+    record: Attendance | None = Attendance.query.filter_by(engineer_id=engineer_id, work_date=today).first()
     if not record or not record.check_in:
         return None, 'No check-in found for today.'
     if record.check_out:
         return None, 'Already checked out today.'
-    record.check_out = datetime.utcnow()
+    record.check_out = _utcnow()
     db.session.commit()
     return record, None
 
 
-def get_engineer_attendance(engineer_id, start_date, end_date):
+def get_engineer_attendance(engineer_id: int, start_date: date, end_date: date):
     return Attendance.query.filter(
         Attendance.engineer_id == engineer_id,
         Attendance.work_date >= start_date,

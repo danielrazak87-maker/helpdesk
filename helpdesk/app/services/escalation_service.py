@@ -1,13 +1,16 @@
-from datetime import datetime, timedelta
-from app import db
+from __future__ import annotations
+
+from datetime import datetime, timedelta, timezone
+from typing import Optional
+from app import db, utcnow
 from app.models.ticket import Ticket
 from app.models.escalation import EscalationRule, EscalationLog
 from app.models.notification import Notification
 
 
-def run_escalation_checks():
+def run_escalation_checks() -> None:
     """Called by scheduler — check all open tickets for escalation triggers."""
-    open_tickets = Ticket.query.filter(
+    open_tickets: list[Ticket] = Ticket.query.filter(
         Ticket.status.notin_(['resolved', 'closed']),
         Ticket.sla_policy_id.isnot(None)
     ).all()
@@ -16,18 +19,17 @@ def run_escalation_checks():
         _check_ticket_escalation(ticket)
 
 
-def _check_ticket_escalation(ticket: Ticket):
+def _check_ticket_escalation(ticket: Ticket) -> None:
     """Evaluate escalation rules for a single ticket."""
-    rules = EscalationRule.query.filter_by(
+    rules: list[EscalationRule] = EscalationRule.query.filter_by(
         sla_policy_id=ticket.sla_policy_id
     ).order_by(EscalationRule.escalation_level).all()
 
-    elapsed_mins = int((datetime.utcnow() - ticket.created_at).total_seconds() / 60)
+    elapsed_mins = int((utcnow() - ticket.created_at).total_seconds() / 60)
 
     for rule in rules:
         if elapsed_mins >= rule.trigger_after_mins:
-            # Check if already escalated at this level
-            already = EscalationLog.query.filter_by(
+            already: EscalationLog | None = EscalationLog.query.filter_by(
                 ticket_id=ticket.id,
                 escalation_level=rule.escalation_level
             ).first()
@@ -35,7 +37,7 @@ def _check_ticket_escalation(ticket: Ticket):
                 _escalate(ticket, rule)
 
 
-def _escalate(ticket: Ticket, rule: EscalationRule):
+def _escalate(ticket: Ticket, rule: EscalationRule) -> None:
     """Create escalation log and send notification."""
     log = EscalationLog(
         ticket_id=ticket.id,

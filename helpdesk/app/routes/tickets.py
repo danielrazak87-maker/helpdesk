@@ -1,9 +1,13 @@
 from flask import Blueprint, render_template, redirect, url_for, flash, request, abort
 from flask_login import login_required, current_user
-from datetime import datetime
+from datetime import datetime, timezone
 import os
 from werkzeug.utils import secure_filename
 from app import db
+
+
+def _utcnow() -> datetime:
+    return datetime.now(timezone.utc).replace(tzinfo=None)
 from app.models.ticket import Ticket, TicketComment, TicketHistory, TICKET_PRIORITIES, TICKET_CATEGORIES, TICKET_STATUSES
 from app.models.sla import SLAPolicy
 from app.services.sla_service import assign_sla
@@ -19,13 +23,13 @@ tickets_bp = Blueprint('tickets', __name__)
 ALLOWED_EXTENSIONS = {'pdf', 'png', 'jpg', 'jpeg', 'gif', 'doc', 'docx', 'txt', 'zip'}
 
 
-def allowed_file(filename):
+def allowed_file(filename: str) -> bool:
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 
 @tickets_bp.route('/')
 @login_required
-def my_tickets():
+def my_tickets() -> str:
     page = request.args.get('page', 1, type=int)
     status_filter = request.args.get('status', '')
     priority_filter = request.args.get('priority', '')
@@ -53,7 +57,7 @@ def my_tickets():
 
 @tickets_bp.route('/create', methods=['GET', 'POST'])
 @login_required
-def create():
+def create() -> str:
     if request.method == 'POST':
         title = request.form.get('title', '').strip()
         description = request.form.get('description', '').strip()
@@ -124,7 +128,7 @@ def create():
 
 @tickets_bp.route('/<int:ticket_id>')
 @login_required
-def detail(ticket_id):
+def detail(ticket_id: int) -> str:
     ticket = Ticket.query.get_or_404(ticket_id)
     _check_access(ticket)
 
@@ -149,7 +153,7 @@ def detail(ticket_id):
 
 @tickets_bp.route('/<int:ticket_id>/update', methods=['POST'])
 @login_required
-def update(ticket_id):
+def update(ticket_id: int) -> str:
     ticket = Ticket.query.get_or_404(ticket_id)
     _check_access(ticket)
 
@@ -161,10 +165,10 @@ def update(ticket_id):
         ticket.status = new_status
         _log_history(ticket.id, current_user.id, 'status', old_status, new_status)
         if new_status == 'resolved':
-            ticket.resolved_at = datetime.utcnow()
+            ticket.resolved_at = _utcnow()
             notify_ticket_resolved(ticket)
         elif new_status == 'closed':
-            ticket.closed_at = datetime.utcnow()
+            ticket.closed_at = _utcnow()
         notify_ticket_updated(ticket, current_user)
 
     if new_assigned and new_assigned != ticket.assigned_to and not current_user.is_user():
@@ -173,7 +177,7 @@ def update(ticket_id):
         _log_history(ticket.id, current_user.id, 'assigned_to', str(old_assigned), str(new_assigned))
         notify_ticket_assigned(ticket)
 
-    ticket.updated_at = datetime.utcnow()
+    ticket.updated_at = _utcnow()
     db.session.commit()
     flash('Ticket updated.', 'success')
     return redirect(url_for('tickets.detail', ticket_id=ticket.id))
@@ -181,7 +185,7 @@ def update(ticket_id):
 
 @tickets_bp.route('/<int:ticket_id>/comment', methods=['POST'])
 @login_required
-def add_comment(ticket_id):
+def add_comment(ticket_id: int) -> str:
     ticket = Ticket.query.get_or_404(ticket_id)
     _check_access(ticket)
 
@@ -202,7 +206,7 @@ def add_comment(ticket_id):
 
     # Mark as responded if engineer is first to comment
     if current_user.is_engineer() and not ticket.sla_responded_at:
-        ticket.sla_responded_at = datetime.utcnow()
+        ticket.sla_responded_at = _utcnow()
 
     db.session.commit()
     flash('Comment added.', 'success')
@@ -211,7 +215,7 @@ def add_comment(ticket_id):
 
 @tickets_bp.route('/<int:ticket_id>/rate', methods=['POST'])
 @login_required
-def rate_ticket(ticket_id):
+def rate_ticket(ticket_id: int) -> str:
     ticket = Ticket.query.get_or_404(ticket_id)
     if ticket.created_by != current_user.id:
         abort(403)
@@ -229,7 +233,7 @@ def rate_ticket(ticket_id):
     return redirect(url_for('tickets.detail', ticket_id=ticket_id))
 
 
-def _check_access(ticket):
+def _check_access(ticket) -> None:
     if current_user.is_admin():
         return
     if current_user.is_engineer() and ticket.assigned_to == current_user.id:
@@ -239,7 +243,7 @@ def _check_access(ticket):
     abort(403)
 
 
-def _log_history(ticket_id, user_id, field, old_val, new_val):
+def _log_history(ticket_id: int, user_id: int, field: str, old_val: str | None, new_val: str | None) -> None:
     h = TicketHistory(
         ticket_id=ticket_id,
         changed_by=user_id,

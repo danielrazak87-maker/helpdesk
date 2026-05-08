@@ -1,10 +1,17 @@
+from __future__ import annotations
+
 from flask import Blueprint, render_template, redirect, url_for, flash, request, current_app
 from flask_login import login_user, logout_user, login_required, current_user
 from werkzeug.security import check_password_hash, generate_password_hash
 from itsdangerous import URLSafeTimedSerializer, SignatureExpired, BadSignature
-from datetime import datetime
+from datetime import datetime, timezone
 import re
+from typing import Optional
 from app import db, limiter
+
+
+def _utcnow() -> datetime:
+    return datetime.now(timezone.utc).replace(tzinfo=None)
 from app.models.user import User
 from app.services.notification import send_email, send_password_reset_email
 
@@ -13,7 +20,7 @@ auth_bp = Blueprint('auth', __name__)
 
 # ─── Password Validation ──────────────────────────────────────────────────────
 
-def validate_password_strength(password):
+def validate_password_strength(password: str) -> Optional[str]:
     """Check password meets minimum complexity requirements."""
     if len(password) < 8:
         return 'Password must be at least 8 characters long.'
@@ -26,7 +33,7 @@ def validate_password_strength(password):
     return None
 
 
-def validate_email(email):
+def validate_email(email: str) -> bool:
     """Basic email format validation."""
     pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
     return re.match(pattern, email) is not None
@@ -34,7 +41,7 @@ def validate_email(email):
 
 # ─── Token Helpers ────────────────────────────────────────────────────────────
 
-def get_serializer():
+def get_serializer() -> URLSafeTimedSerializer:
     return URLSafeTimedSerializer(current_app.config['SECRET_KEY'], salt='password-reset')
 
 
@@ -58,7 +65,7 @@ def login():
         user = User.query.filter_by(email=email).first()
 
         if user and user.check_password(password) and user.is_active:
-            user.last_login = datetime.utcnow()
+            user.last_login = _utcnow()
             db.session.commit()
             login_user(user, remember=remember)
             next_page = request.args.get('next')
@@ -93,7 +100,6 @@ def profile():
                 flash('Current password is incorrect.', 'danger')
                 return redirect(url_for('auth.profile'))
 
-            # Validate new password strength
             error = validate_password_strength(new_password)
             if error:
                 flash(error, 'danger')
@@ -129,7 +135,6 @@ def register():
             flash('Please enter a valid email address.', 'danger')
             return render_template('auth/register.html')
 
-        # Validate password strength
         error = validate_password_strength(password)
         if error:
             flash(error, 'danger')
@@ -191,7 +196,7 @@ def forgot_password():
 
 @auth_bp.route('/reset-password/<token>', methods=['GET', 'POST'])
 @limiter.limit("5/minute")
-def reset_password(token):
+def reset_password(token: str):
     if current_user.is_authenticated:
         return redirect(url_for('main.dashboard'))
 
@@ -217,7 +222,6 @@ def reset_password(token):
             flash('Passwords do not match.', 'danger')
             return render_template('auth/reset_password.html', token=token)
 
-        # Validate password strength
         error = validate_password_strength(password)
         if error:
             flash(error, 'danger')
@@ -229,7 +233,7 @@ def reset_password(token):
             return redirect(url_for('auth.login'))
 
         user.set_password(password)
-        user.password_updated_at = datetime.utcnow()
+        user.password_updated_at = _utcnow()
         db.session.commit()
 
         flash('Password has been reset successfully. Please log in.', 'success')

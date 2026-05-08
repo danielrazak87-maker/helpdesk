@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from flask import Blueprint, render_template, redirect, url_for, request, jsonify
 from flask_login import login_required, current_user
 from app.models.ticket import Ticket
@@ -36,7 +38,7 @@ def mark_all_read():
 
 @main_bp.route('/notifications/<int:nid>/read')
 @login_required
-def mark_notification_read(nid):
+def mark_notification_read(nid: int):
     n = Notification.query.get_or_404(nid)
     if n.user_id == current_user.id:
         n.is_read = True
@@ -55,7 +57,6 @@ def search():
     if len(q) < 2:
         return jsonify({'results': []})
 
-    # Build role-filtered base query
     if current_user.is_admin():
         base = Ticket.query
     elif current_user.is_engineer():
@@ -63,7 +64,6 @@ def search():
     else:
         base = Ticket.query.filter_by(project=current_user.project)
 
-    # Search by ticket number, title, or description
     results = (
         base.filter(
             db.or_(

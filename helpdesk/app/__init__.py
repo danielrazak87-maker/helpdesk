@@ -1,3 +1,6 @@
+from __future__ import annotations
+
+from datetime import datetime, timezone
 from flask import Flask, session, render_template
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
@@ -8,6 +11,7 @@ from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from app.config import Config
 import logging
+from typing import Optional
 
 db = SQLAlchemy()
 migrate = Migrate()
@@ -19,7 +23,14 @@ limiter = Limiter(key_func=get_remote_address)
 logger = logging.getLogger(__name__)
 
 
-def create_app():
+def utcnow() -> datetime:
+    """Return a naive datetime representing the current time in UTC.
+    Replacement for deprecated datetime.utcnow().
+    """
+    return datetime.now(timezone.utc).replace(tzinfo=None)
+
+
+def create_app() -> Flask:
     app = Flask(__name__, template_folder='templates', static_folder='static')
     app.config.from_object(Config)
 
@@ -29,7 +40,6 @@ def create_app():
     mail.init_app(app)
     csrf.init_app(app)
 
-    # Initialize rate limiter
     limiter.init_app(app)
 
     login_manager.login_view = 'auth.login'
@@ -97,13 +107,12 @@ def create_app():
     return app
 
 
-def _seed_defaults(app):
+def _seed_defaults(app: Flask) -> None:
     """Create default admin, SLA policies, and escalation rules if DB is empty."""
     admin_password = app.config.get('ADMIN_PASSWORD')
     if not admin_password:
         logger.warning("ADMIN_PASSWORD not set in environment — skipping admin seed."
                        " Set ADMIN_PASSWORD in .env for first-run seeding.")
-        # Still seed SLA policies if empty
         _seed_sla_policies()
         return
 
@@ -125,7 +134,7 @@ def _seed_defaults(app):
     _seed_sla_policies()
 
 
-def _seed_sla_policies():
+def _seed_sla_policies() -> None:
     """Seed default SLA policies if table is empty."""
     from app.models.sla import SLAPolicy
     if not SLAPolicy.query.first():

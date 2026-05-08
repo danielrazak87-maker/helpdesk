@@ -1,4 +1,4 @@
-from app import db
+from app import db, utcnow
 from datetime import datetime
 
 
@@ -11,7 +11,7 @@ class SLAPolicy(db.Model):
     response_time_mins = db.Column(db.Integer, nullable=False)
     resolution_time_mins = db.Column(db.Integer, nullable=False)
     escalate_on_breach = db.Column(db.Boolean, default=True)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=utcnow)
 
     tickets = db.relationship('Ticket', backref='sla_policy', lazy='dynamic')
     escalation_rules = db.relationship('EscalationRule', backref='sla_policy', lazy='dynamic', cascade='all, delete-orphan')

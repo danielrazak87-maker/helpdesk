@@ -1,13 +1,17 @@
+from __future__ import annotations
+
 from app import db, mail
 from app.models.notification import Notification
 from app.models.user import User
 from flask_mail import Message
 from flask import render_template, url_for, current_app
+from typing import Optional
 
 
 # ─── In-App Notifications ────────────────────────────────────────────────────
 
-def send_notification(user_id, title, message, ticket_id=None, ntype='info'):
+def send_notification(user_id: int, title: str, message: str,
+                      ticket_id: Optional[int] = None, ntype: str = 'info') -> None:
     """Create an in-app notification."""
     n = Notification(
         user_id=user_id,
@@ -22,11 +26,11 @@ def send_notification(user_id, title, message, ticket_id=None, ntype='info'):
 
 # ─── Email Notifications ─────────────────────────────────────────────────────
 
-def send_email(subject, recipients, body_text, body_html=None):
+def send_email(subject: str, recipients: list[str] | str, body_text: str,
+               body_html: Optional[str] = None) -> None:
     """Send an email notification via Flask-Mail."""
     if not recipients:
         return
-    # Skip if SMTP not configured
     if not current_app.config.get('MAIL_USERNAME'):
         current_app.logger.info(f'Mail not configured — skipped email to {recipients}: {subject}')
         return
@@ -44,9 +48,8 @@ def send_email(subject, recipients, body_text, body_html=None):
 
 # ─── Ticket Lifecycle Email + In-App ─────────────────────────────────────────
 
-def notify_ticket_created(ticket, creator):
+def notify_ticket_created(ticket, creator) -> None:
     """Notify user that their ticket was created (in-app + email)."""
-    # In-app notification
     send_notification(
         user_id=creator.id,
         ticket_id=ticket.id,
@@ -55,7 +58,6 @@ def notify_ticket_created(ticket, creator):
         ntype='success'
     )
 
-    # Email notification
     ticket_url = url_for('tickets.detail', ticket_id=ticket.id, _external=True)
     html_body = render_template('email/ticket_created.html', user=creator, ticket=ticket, ticket_url=ticket_url)
     text_body = (
@@ -66,22 +68,21 @@ def notify_ticket_created(ticket, creator):
         f'View: {ticket_url}\n'
     )
     send_email(
-        subject=f'[Kayfalah Helpdesk] Ticket {ticket.ticket_number} Created',
+        subject=f'[KF Helpdesk] Ticket {ticket.ticket_number} Created',
         recipients=[creator.email],
         body_text=text_body,
         body_html=html_body
     )
 
 
-def notify_ticket_assigned(ticket):
+def notify_ticket_assigned(ticket) -> None:
     """Notify engineer of new ticket assignment (in-app + email)."""
     if not ticket.assigned_to:
         return
 
-    engineer = User.query.get(ticket.assigned_to)
-    creator = User.query.get(ticket.created_by) if ticket.created_by else None
+    engineer: User | None = db.session.get(User, ticket.assigned_to)
+    creator: User | None = db.session.get(User, ticket.created_by) if ticket.created_by else None
 
-    # In-app notification
     send_notification(
         user_id=ticket.assigned_to,
         ticket_id=ticket.id,
@@ -90,7 +91,6 @@ def notify_ticket_assigned(ticket):
         ntype='info'
     )
 
-    # Email notification
     ticket_url = url_for('tickets.detail', ticket_id=ticket.id, _external=True)
     html_body = render_template(
         'email/ticket_assigned.html',
@@ -108,14 +108,14 @@ def notify_ticket_assigned(ticket):
         f'View: {ticket_url}\n'
     )
     send_email(
-        subject=f'[Kayfalah Helpdesk] New Ticket: {ticket.ticket_number}',
+        subject=f'[KF Helpdesk] New Ticket: {ticket.ticket_number}',
         recipients=[engineer.email],
         body_text=text_body,
         body_html=html_body
     )
 
 
-def notify_ticket_updated(ticket, updated_by_user):
+def notify_ticket_updated(ticket, updated_by_user) -> None:
     """Notify ticket creator of status change."""
     if ticket.created_by != updated_by_user.id:
         send_notification(
@@ -127,11 +127,10 @@ def notify_ticket_updated(ticket, updated_by_user):
         )
 
 
-def notify_ticket_resolved(ticket):
+def notify_ticket_resolved(ticket) -> None:
     """Notify user their ticket is resolved (in-app + email)."""
-    creator = User.query.get(ticket.created_by) if ticket.created_by else None
+    creator: User | None = db.session.get(User, ticket.created_by) if ticket.created_by else None
 
-    # In-app notification
     send_notification(
         user_id=ticket.created_by,
         ticket_id=ticket.id,
@@ -143,7 +142,6 @@ def notify_ticket_resolved(ticket):
     if not creator:
         return
 
-    # Email notification
     ticket_url = url_for('tickets.detail', ticket_id=ticket.id, _external=True)
     html_body = render_template('email/ticket_resolved.html', user=creator, ticket=ticket, ticket_url=ticket_url)
     text_body = (
@@ -152,7 +150,7 @@ def notify_ticket_resolved(ticket):
         f'Please rate your experience: {ticket_url}\n'
     )
     send_email(
-        subject=f'[Kayfalah Helpdesk] Ticket {ticket.ticket_number} Resolved',
+        subject=f'[KF Helpdesk] Ticket {ticket.ticket_number} Resolved',
         recipients=[creator.email],
         body_text=text_body,
         body_html=html_body
@@ -161,7 +159,7 @@ def notify_ticket_resolved(ticket):
 
 # ─── Password Reset Email ────────────────────────────────────────────────────
 
-def send_password_reset_email(user, reset_url):
+def send_password_reset_email(user: User, reset_url: str) -> None:
     """Send password reset email with branded template."""
     html_body = render_template('email/password_reset.html', user=user, reset_url=reset_url)
     text_body = (
@@ -173,7 +171,7 @@ def send_password_reset_email(user, reset_url):
         f'If you did not request this, please ignore this email.\n'
     )
     send_email(
-        subject='[Kayfalah Helpdesk] Password Reset Request',
+        subject='[KF Helpdesk] Password Reset Request',
         recipients=[user.email],
         body_text=text_body,
         body_html=html_body

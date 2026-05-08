@@ -4,7 +4,7 @@ Only count working hours (9am-6pm, Mon-Fri) towards SLA time.
 Weekends and outside-hours are excluded from the timer.
 """
 
-from datetime import datetime, timedelta, time, date
+from datetime import datetime, timedelta, time, date, timezone
 
 BUSINESS_START = time(9, 0)    # 9:00 AM
 BUSINESS_END = time(18, 0)     # 6:00 PM
@@ -140,7 +140,7 @@ def get_elapsed_business_minutes(created_at: datetime, paused_mins: int = 0,
     Calculate elapsed business minutes from ticket creation to now,
     accounting for SLA pauses.
     """
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
 
     if paused_at:
         elapsed = business_minutes_between(created_at, paused_at)

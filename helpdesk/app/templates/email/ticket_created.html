@@ -2,25 +2,25 @@
 {% block email_content %}
 <h2>✅ Ticket Created Successfully</h2>
 <p>Hello <strong>{{ user.full_name }}</strong>,</p>
-<p>Your ticket has been submitted and will be reviewed by our support team shortly.</p>
+<p>Your support request has been received and is now being processed. Our team will review it shortly.</p>
 
 <div class="detail-box">
   <dl>
-    <dt>Ticket Number</dt>
+    <dt>🎫 Ticket Number</dt>
     <dd>{{ ticket.ticket_number }}</dd>
-    <dt>Title</dt>
+    <dt>📋 Title</dt>
     <dd>{{ ticket.title }}</dd>
-    <dt>Priority</dt>
-    <dd>{{ ticket.priority|upper }}</dd>
-    <dt>Category</dt>
+    <dt>⚡ Priority</dt>
+    <dd><span class="email-badge">{{ ticket.priority|upper }}</span></dd>
+    <dt>📂 Category</dt>
     <dd>{{ ticket.category|replace('_', ' ')|title }}</dd>
-    <dt>Status</dt>
+    <dt>📌 Status</dt>
     <dd>{{ ticket.status|replace('_', ' ')|title }}</dd>
   </dl>
 </div>
 
-<p>You can track the progress of your ticket by clicking the button below:</p>
-<a href="{{ ticket_url }}" class="email-btn">View Ticket</a>
+<p>You can track the progress of your ticket and add comments by clicking the button below:</p>
+<a href="{{ ticket_url }}" class="email-btn">📊 Track Ticket</a>
 
 <p class="email-note">
   If the button doesn't work, copy and paste this link into your browser:<br/>
