@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <style>
+    body { margin: 0; padding: 0; background: #f4f5f7; font-family: 'Segoe UI', Arial, sans-serif; }
+    .email-wrap { max-width: 600px; margin: 0 auto; background: #ffffff; }
+    .email-header { background: linear-gradient(135deg, #121029, #1C183E); padding: 2rem; text-align: center; }
+    .email-header h1 { color: #EC8305; margin: 0; font-size: 1.5rem; font-weight: 700; }
+    .email-header .sub { color: #A09CBF; font-size: 0.8rem; margin-top: .25rem; }
+    .email-body { padding: 2rem; color: #1f2937; }
+    .email-body h2 { color: #121029; font-size: 1.25rem; margin: 0 0 1rem; }
+    .email-body p { line-height: 1.6; margin: 0 0 1rem; color: #4b5563; }
+    .email-body .detail-box { background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: 1rem; margin: 1rem 0; }
+    .email-body .detail-box dt { font-size: .75rem; text-transform: uppercase; color: #6b7280; letter-spacing: .05em; }
+    .email-body .detail-box dd { margin: 0 0 .75rem; font-weight: 600; color: #111827; }
+    .email-body .detail-box dd:last-child { margin-bottom: 0; }
+    .email-btn { display: inline-block; background: #EC8305; color: #ffffff !important; text-decoration: none; padding: .75rem 1.5rem; border-radius: 8px; font-weight: 600; margin: 1rem 0; }
+    .email-btn:hover { background: #D47604; }
+    .email-footer { padding: 1.5rem 2rem; border-top: 1px solid #e5e7eb; font-size: .75rem; color: #9ca3af; text-align: center; }
+    .email-footer a { color: #EC8305; text-decoration: none; }
+    .email-note { font-size: .8rem; color: #9ca3af; margin-top: 1.5rem; border-top: 1px solid #e5e7eb; padding-top: 1rem; }
+  </style>
+</head>
+<body>
+  <div class="email-wrap">
+    <div class="email-header">
+      <h1>🎯 Kayfalah Helpdesk</h1>
+      <div class="sub">Enterprise Support Made Simple</div>
+    </div>
+    <div class="email-body">
+      {% block email_content %}{% endblock %}
+    </div>
+    <div class="email-footer">
+      Developed by <a href="https://kayfalah.com">Kay Falah Digital Sdn. Bhd.</a><br/>
+      &copy; 2026 Kay Falah Digital. All rights reserved.
+    </div>
+  </div>
+</body>
+</html>

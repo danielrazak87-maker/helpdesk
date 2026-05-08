@@ -46,6 +46,11 @@ def dashboard():
         Ticket.category, func.count(Ticket.id)
     ).group_by(Ticket.category).all()
 
+    # Status breakdown
+    status_stats = db.session.query(
+        Ticket.status, func.count(Ticket.id)
+    ).group_by(Ticket.status).all()
+
     # Recent tickets
     recent_tickets = Ticket.query.order_by(Ticket.created_at.desc()).limit(10).all()
 
@@ -68,6 +73,8 @@ def dashboard():
                            total_engineers=total_engineers,
                            priority_stats=dict(priority_stats),
                            category_stats=dict(category_stats),
+                           status_stats=dict(status_stats),
+                           by_status=dict(status_stats),
                            recent_tickets=recent_tickets,
                            engineer_workload=engineer_workload)
 

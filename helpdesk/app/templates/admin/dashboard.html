@@ -83,6 +83,11 @@
           <td>{{ t.assignee.full_name if t.assignee else '—' }}</td>
           <td class="text-muted text-sm">{{ t.created_at.strftime('%d %b %H:%M') }}</td>
         </tr>
+        {% else %}
+        <tr><td colspan="7"><div class="empty-state">
+          <div class="empty-icon" style="font-size:2rem;margin-bottom:.25rem;">📭</div>
+          <div>No tickets created yet.</div>
+        </div></td></tr>
         {% endfor %}
       </tbody>
     </table>
@@ -106,6 +111,11 @@
             </div>
           </td>
         </tr>
+        {% else %}
+        <tr><td colspan="3"><div class="empty-state">
+          <div class="empty-icon" style="font-size:2rem;margin-bottom:.25rem;">👷</div>
+          <div>No engineers configured yet.</div>
+        </div></td></tr>
         {% endfor %}
       </tbody>
     </table>

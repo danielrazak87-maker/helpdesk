@@ -19,6 +19,7 @@ class User(UserMixin, db.Model):
     is_active = db.Column(db.Boolean, default=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     last_login = db.Column(db.DateTime)
+    password_updated_at = db.Column(db.DateTime)
 
     # Relationships
     created_tickets = db.relationship('Ticket', foreign_keys='Ticket.created_by', backref='creator', lazy='dynamic')
@@ -29,6 +30,7 @@ class User(UserMixin, db.Model):
 
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
+        self.password_updated_at = datetime.utcnow()
 
     def check_password(self, password):
         return check_password_hash(self.password_hash, password)

@@ -8,44 +8,133 @@
   </div>
 </div>
 
-<div class="card" style="max-width: 800px;">
+{% if not selected_template %}
+{# --- Template Selection --- #}
+<div class="card">
+  <div class="card-header">Choose a ticket category</div>
   <div class="card-body">
-    <form method="POST" action="{{ url_for('tickets.create') }}">
+    <p class="text-muted" style="margin-bottom:1.25rem;">Select the type of issue you're experiencing. This helps us route your ticket faster.</p>
+    <div class="template-grid">
+      {% for key, tmpl in templates.items() %}
+      <a href="{{ url_for('tickets.create', template=key) }}" class="template-card">
+        <div class="template-icon">{{ tmpl.icon }}</div>
+        <div class="template-name">{{ tmpl.name }}</div>
+        <div class="template-desc">
+          {% if tmpl.fields %}
+          {% for f in tmpl.fields %}{{ f.label }}{% if not loop.last %}, {% endif %}{% endfor %}
+          {% else %}
+          Open-ended description
+          {% endif %}
+        </div>
+      </a>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+{% else %}
+{# --- Template-specific Form --- #}
+<div class="card" style="max-width: 800px;">
+  <div class="card-header">
+    <span>{{ selected_template.icon }} {{ selected_template.name }}</span>
+    <a href="{{ url_for('tickets.create') }}" class="btn btn-ghost btn-sm">Change Category</a>
+  </div>
+  <div class="card-body">
+    <form method="POST" action="{{ url_for('tickets.create') }}" id="createTicketForm" enctype="multipart/form-data">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+      <input type="hidden" name="category" value="{{ selected_template.default_category }}"/>
+
+      {# Template-specific fields #}
+      {% for field in selected_template.fields %}
+      <div class="form-group">
+        <label for="field_{{ field.name }}" class="{% if field.required %}required{% endif %}">{{ field.label }}</label>
+        {% if field.type == 'select' %}
+        <select id="field_{{ field.name }}" name="field_{{ field.name }}" class="form-control" {% if field.required %}required{% endif %}>
+          <option value="">— Select —</option>
+          {% for opt in field.options %}
+          <option value="{{ opt }}">{{ opt }}</option>
+          {% endfor %}
+        </select>
+        {% else %}
+        <input type="text" id="field_{{ field.name }}" name="field_{{ field.name }}" class="form-control"
+               {% if field.required %}required{% endif %} placeholder="{{ field.label }}"/>
+        {% endif %}
+      </div>
+      {% endfor %}
+
+      {# Manual title override #}
       <div class="form-group">
         <label for="title" class="required">Title</label>
-        <input type="text" id="title" name="title" class="form-control" required placeholder="Brief summary of the issue">
+        <input type="text" id="title" name="title" class="form-control" required
+               placeholder="Brief summary of the issue"
+               value="{{ default_title if default_title else '' }}">
       </div>
-      
+
       <div class="form-row">
         <div class="form-group">
-          <label for="category" class="required">Category</label>
-          <select id="category" name="category" class="form-control" required>
-            {% for cat in categories %}
-            <option value="{{ cat }}">{{ cat.replace('_', ' ').title() }}</option>
-            {% endfor %}
-          </select>
-        </div>
-        
-        <div class="form-group">
-          <label for="priority" class="required">Priority</label>
-          <select id="priority" name="priority" class="form-control" required>
+          <label for="priority">Priority</label>
+          <select id="priority" name="priority" class="form-control">
             {% for prio in priorities %}
-            <option value="{{ prio }}">{{ prio.title() }}</option>
+            <option value="{{ prio }}" {% if prio == selected_template.default_priority %}selected{% endif %}>{{ prio.title() }}</option>
             {% endfor %}
           </select>
+          <div class="text-muted text-sm" style="margin-top:0.25rem;">Suggested: {{ selected_template.default_priority.title() }}</div>
+        </div>
+
+        <div class="form-group">
+          <label for="category_display">Category</label>
+          <input type="text" class="form-control" value="{{ selected_template.name }}" disabled/>
         </div>
       </div>
-      
+
+      {# Description guide #}
       <div class="form-group">
         <label for="description" class="required">Description</label>
-        <textarea id="description" name="description" class="form-control" rows="8" required placeholder="Detailed description of your issue..."></textarea>
+        {% if selected_template.description_guide %}
+        <div class="desc-guide">
+          <div class="desc-guide-label">Suggested details to include:</div>
+          <ul class="desc-guide-list">
+            {% for item in selected_template.description_guide %}
+            <li>{{ item }}</li>
+            {% endfor %}
+          </ul>
+        </div>
+        {% endif %}
+        <textarea id="description" name="description" class="form-control" rows="8" required
+                  placeholder="Describe your issue in detail..."></textarea>
       </div>
-      
+
+      {# File attachment #}
+      <div class="form-group">
+        <label for="attachment">Attachment (optional)</label>
+        <input type="file" id="attachment" name="attachment" class="form-control"
+               accept=".pdf,.png,.jpg,.jpeg,.gif,.doc,.docx,.txt,.zip"/>
+        <div class="text-muted text-sm" style="margin-top:0.25rem;">Max 10MB. Allowed: PDF, images, documents, ZIP</div>
+      </div>
+
       <div class="form-actions">
         <a href="{{ url_for('tickets.my_tickets') }}" class="btn btn-ghost">Cancel</a>
-        <button type="submit" class="btn btn-primary">Submit Ticket</button>
+        <button type="submit" class="btn btn-primary" id="submitBtn">
+          <span class="btn-text">Submit Ticket</span>
+          <span class="btn-spinner" style="display:none;">⏳</span>
+        </button>
       </div>
     </form>
   </div>
 </div>
+{% endif %}
+
+{% endblock %}
+{% block scripts %}
+<style>
+.template-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 1rem; }
+.template-card { display: block; background: var(--bg3); border: 1px solid var(--border); border-radius: var(--radius); padding: 1.25rem; text-align: center; text-decoration: none; color: var(--text); transition: all .2s; }
+.template-card:hover { border-color: var(--accent); transform: translateY(-2px); box-shadow: 0 6px 20px rgba(236,131,5,.2); }
+.template-icon { font-size: 2.5rem; margin-bottom: .5rem; }
+.template-name { font-weight: 600; font-size: .9rem; margin-bottom: .25rem; }
+.template-desc { font-size: .75rem; color: var(--muted); }
+.desc-guide { background: rgba(236,131,5,.08); border: 1px solid rgba(236,131,5,.2); border-radius: 8px; padding: .75rem 1rem; margin-bottom: .75rem; }
+.desc-guide-label { font-size: .8rem; font-weight: 600; color: var(--accent); margin-bottom: .35rem; }
+.desc-guide-list { margin: 0; padding-left: 1.25rem; font-size: .8rem; color: var(--muted); }
+.desc-guide-list li { margin-bottom: .15rem; }
+</style>
 {% endblock %}

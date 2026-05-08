@@ -66,7 +66,24 @@
           <td><a href="{{ url_for('tickets.detail', ticket_id=t.id) }}" class="btn btn-ghost btn-xs">View →</a></td>
         </tr>
         {% else %}
-        <tr><td colspan="9" class="empty-state">No tickets found.</td></tr>
+        <tr><td colspan="9">
+          <div class="empty-state">
+            <div class="empty-icon" style="font-size:3rem;margin-bottom:.5rem;">🎫</div>
+            <div style="font-weight:600;margin-bottom:.25rem;">No tickets found</div>
+            <div class="text-muted" style="margin-bottom:1rem;">
+              {% if status_filter or priority_filter %}
+              Try clearing your filters or adjusting your search criteria.
+              {% else %}
+              Create your first ticket to get started.
+              {% endif %}
+            </div>
+            {% if not status_filter and not priority_filter %}
+            <a href="{{ url_for('tickets.create') }}" class="btn btn-primary">+ Create Ticket</a>
+            {% else %}
+            <a href="{{ url_for('tickets.my_tickets') }}" class="btn btn-ghost">Clear Filters</a>
+            {% endif %}
+          </div>
+        </td></tr>
         {% endfor %}
       </tbody>
     </table>

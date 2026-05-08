@@ -1,0 +1,152 @@
+{% extends "base.html" %}
+{% block title %}SLA Dashboard — Admin{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title">⏱️ SLA Dashboard</h1>
+  <a href="{{ url_for('admin.dashboard') }}" class="btn btn-ghost">← Back to Admin</a>
+</div>
+
+<!-- KPI Summary -->
+<div class="kpi-grid">
+  <div class="kpi-card kpi-blue">
+    <div class="kpi-icon">📋</div>
+    <div class="kpi-value">{{ policy_stats|length }}</div>
+    <div class="kpi-label">SLA Policies</div>
+  </div>
+  <div class="kpi-card kpi-red">
+    <div class="kpi-icon">🔴</div>
+    <div class="kpi-value">{{ sla_ticket_data|selectattr('status', 'equalto', 'breached')|list|length }}</div>
+    <div class="kpi-label">Currently Breached</div>
+  </div>
+  <div class="kpi-card kpi-yellow">
+    <div class="kpi-icon">⚠️</div>
+    <div class="kpi-value">{{ policy_stats|sum(attribute='at_risk') }}</div>
+    <div class="kpi-label">At Risk (>75%)</div>
+  </div>
+  <div class="kpi-card kpi-teal">
+    <div class="kpi-icon">⏸️</div>
+    <div class="kpi-value">{{ sla_ticket_data|selectattr('ticket.sla_paused_at', 'ne', None)|list|length }}</div>
+    <div class="kpi-label">SLA Paused</div>
+  </div>
+</div>
+
+<!-- Per-Policy Stats -->
+<div class="card">
+  <div class="card-header">Per-Policy SLA Metrics</div>
+  <div class="table-wrap">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Policy</th>
+          <th>Priority</th>
+          <th>Total Tickets</th>
+          <th>Breached</th>
+          <th>At Risk</th>
+          <th>75% Warned</th>
+          <th>90% Warned</th>
+          <th>Breach Rate</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for ps in policy_stats %}
+        <tr>
+          <td><strong>{{ ps.policy.name }}</strong></td>
+          <td><span class="badge badge-priority-{{ ps.policy.priority }}">{{ ps.policy.priority.title() }}</span></td>
+          <td>{{ ps.total }}</td>
+          <td>{{ ps.breached }}</td>
+          <td>{{ ps.at_risk }}</td>
+          <td>{{ ps.warnings_75 }}</td>
+          <td>{{ ps.warnings_90 }}</td>
+          <td><strong>{{ ps.breach_rate }}%</strong></td>
+        </tr>
+        {% else %}
+        <tr><td colspan="8" class="empty-state">No SLA policies defined.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Active Tickets SLA Status -->
+<div class="card">
+  <div class="card-header">
+    Open Tickets — SLA Status
+    <span class="badge-count">{{ sla_ticket_data|length }}</span>
+  </div>
+  <div class="table-wrap">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Ticket #</th>
+          <th>Title</th>
+          <th>Priority</th>
+          <th>Status</th>
+          <th>SLA Status</th>
+          <th>% Elapsed</th>
+          <th>Time Left</th>
+          <th>Policy</th>
+          <th>Paused</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for sd in sla_ticket_data %}
+        <tr>
+          <td><a href="{{ url_for('tickets.detail', ticket_id=sd.ticket.id) }}" class="ticket-link">{{ sd.ticket.ticket_number }}</a></td>
+          <td>{{ sd.ticket.title[:40] }}{% if sd.ticket.title|length > 40 %}...{% endif %}</td>
+          <td><span class="badge badge-priority-{{ sd.ticket.priority }}">{{ sd.ticket.priority.title() }}</span></td>
+          <td><span class="badge badge-status-{{ sd.ticket.status }}">{{ sd.ticket.status.replace('_',' ').title() }}</span></td>
+          <td>
+            <span class="sla-dot sla-{{ sd.status }}">
+              {% if sd.status == 'breached' %}🔴{% elif sd.status == 'warning' %}⚠️{% elif sd.status == 'on_track' %}✅{% else %}✓{% endif %}
+              {{ sd.status.replace('_',' ').title() }}
+            </span>
+          </td>
+          <td>
+            <div class="mini-bar-wrap" style="width:100px">
+              <div class="mini-bar {% if sd.percent >= 90 %}bar-danger{% elif sd.percent >= 75 %}bar-warning{% else %}bar-safe{% endif %}" style="width:{{ sd.percent }}%"></div>
+            </div>
+            <span class="text-sm">{{ sd.percent }}%</span>
+          </td>
+          <td>{% if sd.remaining is not none %}{{ sd.remaining // 60 }}h {{ sd.remaining % 60 }}m{% else %}—{% endif %}</td>
+          <td><span class="text-sm">{{ sd.policy_name }}</span></td>
+          <td>{% if sd.ticket.sla_paused_at %}<span class="badge badge-warning">⏸️</span>{% else %}—{% endif %}</td>
+          <td><a href="{{ url_for('tickets.detail', ticket_id=sd.ticket.id) }}" class="btn btn-ghost btn-xs">View</a></td>
+        </tr>
+        {% else %}
+        <tr><td colspan="10" class="empty-state">No open tickets.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Recent Breach History -->
+<div class="card">
+  <div class="card-header">
+    🔴 Recent SLA Breaches
+    <span class="badge-count">{{ ticket_breaches|length }}</span>
+  </div>
+  <div class="table-wrap">
+    <table class="table">
+      <thead>
+        <tr><th>Ticket #</th><th>Title</th><th>Priority</th><th>Assigned To</th><th>Breached</th><th></th></tr>
+      </thead>
+      <tbody>
+        {% for t in ticket_breaches %}
+        <tr>
+          <td><a href="{{ url_for('tickets.detail', ticket_id=t.id) }}" class="ticket-link">{{ t.ticket_number }}</a></td>
+          <td>{{ t.title[:45] }}{% if t.title|length > 45 %}...{% endif %}</td>
+          <td><span class="badge badge-priority-{{ t.priority }}">{{ t.priority.title() }}</span></td>
+          <td>{{ t.assignee.full_name if t.assignee else '—' }}</td>
+          <td class="text-muted text-sm">{{ t.updated_at.strftime('%d %b %Y %H:%M') if t.updated_at else '—' }}</td>
+          <td><a href="{{ url_for('tickets.detail', ticket_id=t.id) }}" class="btn btn-ghost btn-xs">View</a></td>
+        </tr>
+        {% else %}
+        <tr><td colspan="6" class="empty-state">No SLA breaches yet. Great! 🎉</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

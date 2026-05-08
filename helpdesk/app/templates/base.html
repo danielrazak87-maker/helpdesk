@@ -5,6 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>{% block title %}Kayfalah Helpdesk{% endblock %}</title>
   <meta name="description" content="{% block meta_desc %}Enterprise Helpdesk Ticketing System{% endblock %}"/>
+  <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='img/kf-favicon.svg') }}"/>
+  <link rel="alternate icon" href="{{ url_for('static', filename='img/kf-favicon.ico') }}"/>
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
   <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}"/>
@@ -97,6 +99,7 @@
           <div class="notif-header">
             <span>Notifications</span>
             <form method="POST" action="{{ url_for('main.mark_all_read') }}" style="display:inline">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
               <button type="submit" class="btn-link">Mark all read</button>
             </form>
           </div>

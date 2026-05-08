@@ -12,6 +12,7 @@ from app.services.notification import (
     notify_ticket_created, notify_ticket_assigned,
     notify_ticket_updated, notify_ticket_resolved
 )
+from app.ticket_templates import TICKET_TEMPLATES
 
 tickets_bp = Blueprint('tickets', __name__)
 
@@ -61,7 +62,7 @@ def create():
 
         if not title or not description:
             flash('Title and description are required.', 'danger')
-            return render_template('tickets/create.html', priorities=TICKET_PRIORITIES, categories=TICKET_CATEGORIES)
+            return render_template('tickets/create.html', priorities=TICKET_PRIORITIES, categories=TICKET_CATEGORIES, templates=TICKET_TEMPLATES)
 
         ticket = Ticket(
             ticket_number=Ticket.generate_ticket_number(),
@@ -101,7 +102,24 @@ def create():
         flash(f'Ticket {ticket.ticket_number} created successfully!', 'success')
         return redirect(url_for('tickets.detail', ticket_id=ticket.id))
 
-    return render_template('tickets/create.html', priorities=TICKET_PRIORITIES, categories=TICKET_CATEGORIES)
+    # GET: check for template query param
+    selected_template_key = request.args.get('template', '')
+    selected_template = None
+    default_title = ''
+    if selected_template_key in TICKET_TEMPLATES:
+        selected_template = TICKET_TEMPLATES[selected_template_key]
+        # Build a default title hint from template name
+        if selected_template_key != 'other':
+            default_title = f'{selected_template["name"]} - '
+
+    return render_template(
+        'tickets/create.html',
+        priorities=TICKET_PRIORITIES,
+        categories=TICKET_CATEGORIES,
+        templates=TICKET_TEMPLATES,
+        selected_template=selected_template,
+        default_title=default_title
+    )
 
 
 @tickets_bp.route('/<int:ticket_id>')
