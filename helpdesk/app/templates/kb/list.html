@@ -1,0 +1,111 @@
+{% extends "base.html" %}
+{% block title %}Knowledge Base - Kayfalah Helpdesk{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>Knowledge Base</h2>
+        {% if current_user.is_authenticated and not current_user.is_user() %}
+        <div>
+            <a href="{{ url_for('kb.admin_list') }}" class="btn btn-primary">Admin Manage</a>
+            <a href="{{ url_for('kb.create_article') }}" class="btn btn-success">New Article</a>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Search Bar -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <form method="GET" action="{{ url_for('kb.search_articles_route') }}" class="form-inline">
+                <input type="text" name="q" class="form-control mr-2" placeholder="Search articles..." value="{{ search_query or '' }}" style="width: 300px;">
+                <button type="submit" class="btn btn-primary">Search</button>
+            </form>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Category Sidebar -->
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-header">Categories</div>
+                <div class="list-group list-group-flush">
+                    <a href="{{ url_for('kb.list_articles') }}" class="list-group-item {% if not current_category %}active{% endif %}">All Categories</a>
+                    {% for cat in categories %}
+                    <a href="{{ url_for('kb.category_articles', slug=cat.slug) }}" 
+                       class="list-group-item {% if current_category and current_category.id == cat.id %}active{% endif %}">
+                        {{ cat.name }}
+                    </a>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Article List -->
+        <div class="col-md-9">
+            {% if search_query %}
+            <h4>Search Results for "{{ search_query }}"</h4>
+            {% if search_results %}
+            <div class="list-group">
+                {% for article in search_results %}
+                <a href="{{ url_for('kb.view_article', slug=article.slug) }}" class="list-group-item list-group-item-action">
+                    <div class="d-flex w-100 justify-content-between">
+                        <h5 class="mb-1">{{ article.title }}</h5>
+                        <small>{{ article.created_at.strftime('%d %b %Y') }}</small>
+                    </div>
+                    <p class="mb-1 text-muted">{{ article.content[:150] }}{% if article.content|length > 150 %}...{% endif %}</p>
+                    <small>Views: {{ article.view_count }} | Category: {{ article.category.name if article.category else 'Uncategorized' }}</small>
+                </a>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="alert alert-info">No articles found matching your search.</div>
+            {% endif %}
+
+            {% elif current_category %}
+            <h4>Category: {{ current_category.name }}</h4>
+            {% if category_articles %}
+            <div class="list-group">
+                {% for article in category_articles %}
+                <a href="{{ url_for('kb.view_article', slug=article.slug) }}" class="list-group-item list-group-item-action">
+                    <div class="d-flex w-100 justify-content-between">
+                        <h5 class="mb-1">{{ article.title }}</h5>
+                        <small>{{ article.created_at.strftime('%d %b %Y') }}</small>
+                    </div>
+                    <p class="mb-1 text-muted">{{ article.content[:150] }}{% if article.content|length > 150 %}...{% endif %}</p>
+                    <small>Views: {{ article.view_count }}</small>
+                </a>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="alert alert-info">No articles in this category yet.</div>
+            {% endif %}
+
+            {% else %}
+            {% for category, articles in articles_by_category.items() %}
+            <div class="card mb-4">
+                <div class="card-header">{{ category.name }}</div>
+                <div class="card-body">
+                    {% if articles %}
+                    <div class="list-group">
+                        {% for article in articles %}
+                        <a href="{{ url_for('kb.view_article', slug=article.slug) }}" class="list-group-item list-group-item-action">
+                            <div class="d-flex w-100 justify-content-between">
+                                <h5 class="mb-1">{{ article.title }}</h5>
+                                <small>{{ article.created_at.strftime('%d %b %Y') }}</small>
+                            </div>
+                            <p class="mb-1 text-muted">{{ article.content[:150] }}{% if article.content|length > 150 %}...{% endif %}</p>
+                            <small>Views: {{ article.view_count }}</small>
+                        </a>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <p class="text-muted">No articles in this category.</p>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

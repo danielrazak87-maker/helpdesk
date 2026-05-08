@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+{% block title %}{% if field %}Edit{% else %}Create{% endif %} Custom Field{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    {% if field %}Edit{% else %}Create{% endif %} Custom Field
+                </div>
+                <div class="card-body">
+                    <form method="POST">
+                        {{ csrf_token() }}
+                        <div class="form-group">
+                            <label>Field Name *</label>
+                            <input type="text" name="field_name" class="form-control" 
+                                   value="{{ field.field_name if field else '' }}" required
+                                   placeholder="e.g. Building Number">
+                        </div>
+                        <div class="form-group">
+                            <label>Field Type</label>
+                            <select name="field_type" class="form-control" id="fieldTypeSelect">
+                                <option value="string" {% if field and field.field_type == 'string' %}selected{% endif %}>Text (single line)</option>
+                                <option value="text" {% if field and field.field_type == 'text' %}selected{% endif %}>Text (multi line)</option>
+                                <option value="number" {% if field and field.field_type == 'number' %}selected{% endif %}>Number</option>
+                                <option value="date" {% if field and field.field_type == 'date' %}selected{% endif %}>Date</option>
+                                <option value="select" {% if field and field.field_type == 'select' %}selected{% endif %}>Dropdown Select</option>
+                            </select>
+                        </div>
+                        <div class="form-group" id="optionsGroup" style="{% if not field or field.field_type != 'select' %}display:none;{% endif %}">
+                            <label>Options (JSON array for select type)</label>
+                            <textarea name="field_options" class="form-control" rows="4" 
+                                      placeholder='["Option 1", "Option 2", "Option 3"]'>{{ field.field_options if field else '' }}</textarea>
+                            <small class="text-muted">Enter options as a JSON array of strings.</small>
+                        </div>
+                        <div class="form-group">
+                            <label>Project Scope</label>
+                            <input type="text" name="project" class="form-control" 
+                                   value="{{ field.project if field else '' }}" 
+                                   placeholder="Leave empty for all projects">
+                            <small class="text-muted">Enter project name to scope this field, or leave empty for global.</small>
+                        </div>
+                        <div class="form-group">
+                            <label>Sort Order</label>
+                            <input type="number" name="sort_order" class="form-control" 
+                                   value="{{ field.sort_order if field else 0 }}" min="0">
+                        </div>
+                        <div class="form-check mb-3">
+                            <input type="checkbox" name="is_required" class="form-check-input" id="is_required"
+                                   {% if field and field.is_required %}checked{% endif %}>
+                            <label class="form-check-label" for="is_required">Required Field</label>
+                        </div>
+                        <button type="submit" class="btn btn-primary">
+                            {% if field %}Update{% else %}Create{% endif %}
+                        </button>
+                        <a href="{{ url_for('cf.list_fields') }}" class="btn btn-secondary">Cancel</a>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.getElementById('fieldTypeSelect')?.addEventListener('change', function() {
+    document.getElementById('optionsGroup').style.display = 
+        this.value === 'select' ? 'block' : 'none';
+});
+</script>
+{% endblock %}

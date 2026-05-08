@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block title %}Custom Fields - Admin{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>Custom Fields</h2>
+        <a href="{{ url_for('cf.create_field') }}" class="btn btn-primary">New Custom Field</a>
+    </div>
+
+    <div class="card">
+        <div class="card-body">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Field Name</th>
+                        <th>Type</th>
+                        <th>Project Scope</th>
+                        <th>Required</th>
+                        <th>Sort Order</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for field in fields %}
+                    <tr>
+                        <td>{{ field.field_name }}</td>
+                        <td><span class="badge badge-info">{{ field.field_type }}</span></td>
+                        <td>{{ field.project or 'All Projects' }}</td>
+                        <td>{% if field.is_required %}<span class="badge badge-danger">Yes</span>{% else %}No{% endif %}</td>
+                        <td>{{ field.sort_order }}</td>
+                        <td>
+                            <a href="{{ url_for('cf.edit_field', field_id=field.id) }}" class="btn btn-sm btn-primary">Edit</a>
+                            <form method="POST" action="{{ url_for('cf.delete_field', field_id=field.id) }}" class="d-inline">
+                                <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Delete this field? All associated values will be lost.')">Delete</button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="6" class="text-center text-muted">No custom fields defined.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

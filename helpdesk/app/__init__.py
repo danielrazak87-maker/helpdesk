@@ -66,12 +66,26 @@ def create_app() -> Flask:
         response.headers['Referrer-Policy'] = 'strict-origin-when-cross-origin'
         return response
 
+    # Custom Jinja2 filters
+    import json
+    @app.template_filter('fromjson')
+    def fromjson_filter(value):
+        try:
+            return json.loads(value) if value else []
+        except:
+            return []
+
     from app.routes.auth import auth_bp
     from app.routes.tickets import tickets_bp
     from app.routes.admin import admin_bp
     from app.routes.engineer import engineer_bp
     from app.routes.reports import reports_bp
     from app.routes.main import main_bp
+    # Phase 5 imports
+    from app.routes.knowledge_base import kb_bp
+    from app.routes.api import api_bp
+    from app.routes.time_tracking import time_bp
+    from app.routes.custom_fields import cf_bp
 
     app.register_blueprint(auth_bp, url_prefix='/auth')
     app.register_blueprint(tickets_bp, url_prefix='/tickets')
@@ -79,6 +93,11 @@ def create_app() -> Flask:
     app.register_blueprint(engineer_bp, url_prefix='/engineer')
     app.register_blueprint(reports_bp, url_prefix='/reports')
     app.register_blueprint(main_bp)
+    # Phase 5 registrations
+    app.register_blueprint(kb_bp)
+    app.register_blueprint(api_bp)
+    app.register_blueprint(time_bp)
+    app.register_blueprint(cf_bp)
 
     from app.scheduler.jobs import start_scheduler
     start_scheduler(app)
@@ -88,6 +107,11 @@ def create_app() -> Flask:
 
     with app.app_context():
         from app.models.user import User
+        # Phase 5 models - import to ensure tables are created
+        from app.models.knowledge_base import KnowledgeBaseArticle, KnowledgeBaseCategory
+        from app.models.time_tracking import TimeEntry
+        from app.models.custom_field import CustomField, CustomFieldValue
+        from app.models.api_token import ApiToken
         db.create_all()
         _seed_defaults(app)
 
@@ -114,6 +138,7 @@ def _seed_defaults(app: Flask) -> None:
         logger.warning("ADMIN_PASSWORD not set in environment — skipping admin seed."
                        " Set ADMIN_PASSWORD in .env for first-run seeding.")
         _seed_sla_policies()
+        _seed_kb_categories()
         return
 
     from app.models.user import User
@@ -132,6 +157,7 @@ def _seed_defaults(app: Flask) -> None:
         db.session.commit()
 
     _seed_sla_policies()
+    _seed_kb_categories()
 
 
 def _seed_sla_policies() -> None:
@@ -146,4 +172,21 @@ def _seed_sla_policies() -> None:
         ]
         for p in policies:
             db.session.add(p)
+        db.session.commit()
+
+
+def _seed_kb_categories() -> None:
+    """Seed default KB categories if table is empty."""
+    from app.models.knowledge_base import KnowledgeBaseCategory
+    if not KnowledgeBaseCategory.query.first():
+        categories = [
+            KnowledgeBaseCategory(name='Getting Started', slug='getting-started', description='Setup guides and onboarding', sort_order=1),
+            KnowledgeBaseCategory(name='Troubleshooting', slug='troubleshooting', description='Common issues and solutions', sort_order=2),
+            KnowledgeBaseCategory(name='Network', slug='network', description='Network configuration and issues', sort_order=3),
+            KnowledgeBaseCategory(name='Hardware', slug='hardware', description='Hardware setup and repairs', sort_order=4),
+            KnowledgeBaseCategory(name='Software', slug='software', description='Software installation and usage', sort_order=5),
+            KnowledgeBaseCategory(name='Security', slug='security', description='Security best practices and policies', sort_order=6),
+        ]
+        for cat in categories:
+            db.session.add(cat)
         db.session.commit()
