@@ -28,7 +28,47 @@
   --shadow: 0 4px 24px rgba(0,0,0,.05);
 }
 
+:root.kayfalah-theme {
+  --bg: #091057;
+  --bg2: #024CAA;
+  --bg3: #1a3d8f;
+  --card: #024CAA;
+  --border: #EC8305;
+  --text: #ffffff;
+  --muted: rgba(236, 131, 5, 0.7);
+  --accent: #EC8305;
+  --accent2: #FF9B26;
+  --shadow: 0 4px 24px rgba(0,0,0,.4);
+}
+
 * { box-sizing: border-box; margin: 0; padding: 0; }
+
+/* ─── Theme Toggle Button Group ─────────────────────────────────────────── */
+.theme-toggle-group {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+.theme-btn {
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 1rem;
+  padding: 0.3rem 0.5rem;
+  transition: all 0.2s;
+  line-height: 1;
+}
+.theme-btn:hover {
+  transform: scale(1.15);
+  color: var(--text);
+}
+.theme-btn.active {
+  box-shadow: 0 0 0 2px var(--accent);
+  transform: scale(1.1);
+  color: var(--text);
+}
 body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
 
 /* Sidebar */
@@ -330,6 +370,36 @@ textarea.form-control { resize: vertical; }
 .month-nav { display: flex; align-items: center; gap: .75rem; }
 .month-label { font-weight: 600; font-size: .9rem; }
 .badge-count { background: var(--accent); }
+
+/* Search dropdown */
+.topbar-search { position: relative; }
+.search-dropdown { position: absolute; top: calc(100% + .25rem); left: 0; width: 400px; background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: 0 8px 32px rgba(0,0,0,.5); z-index: 300; max-height: 360px; overflow-y: auto; }
+.search-result-item { display: block; padding: .65rem .875rem; border-bottom: 1px solid var(--border); text-decoration: none; color: var(--text); transition: background .15s; }
+.search-result-item:hover { background: rgba(255,255,255,.04); }
+.search-result-item:last-child { border-bottom: none; }
+.search-result-main { display: flex; gap: .75rem; align-items: center; }
+.search-ticket-num { font-family: monospace; color: var(--accent); font-size: .8rem; font-weight: 600; white-space: nowrap; }
+.search-title { font-size: .85rem; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.search-result-meta { display: flex; gap: .75rem; margin-top: .2rem; font-size: .75rem; }
+.search-priority { font-weight: 600; text-transform: uppercase; }
+.search-status { color: var(--muted); }
+.search-empty { padding: 1.25rem; text-align: center; color: var(--muted); font-size: .85rem; }
+
+/* Error Pages */
+.error-page { display: flex; align-items: center; justify-content: center; min-height: 60vh; }
+.error-card { text-align: center; max-width: 420px; }
+.error-code { font-size: 5rem; font-weight: 800; color: var(--accent); line-height: 1; opacity: .3; }
+.error-icon { font-size: 3rem; margin: .5rem 0; }
+.error-title { font-size: 1.5rem; font-weight: 700; margin-bottom: .75rem; }
+.error-desc { color: var(--muted); line-height: 1.6; margin-bottom: 1.5rem; }
+.error-actions { display: flex; gap: .75rem; justify-content: center; }
+
+/* Loading States */
+.spinner { display: inline-block; width: 1rem; height: 1rem; border: 2px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin .6s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.btn-loading { position: relative; pointer-events: none; opacity: .7; }
+.loading-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.5); display: flex; align-items: center; justify-content: center; z-index: 9999; }
+.loading-overlay .spinner { width: 2.5rem; height: 2.5rem; border-width: 3px; }
 
 @media (max-width: 900px) {
   .sidebar { transform: translateX(-100%); }

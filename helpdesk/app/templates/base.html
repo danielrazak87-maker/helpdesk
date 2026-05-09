@@ -5,16 +5,23 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>{% block title %}Kayfalah Helpdesk{% endblock %}</title>
   <meta name="description" content="{% block meta_desc %}Enterprise Helpdesk Ticketing System{% endblock %}"/>
+  <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='img/kf-favicon.svg') }}"/>
+  <link rel="alternate icon" href="{{ url_for('static', filename='img/kf-favicon.ico') }}"/>
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
   <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}"/>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script src="{{ url_for('static', filename='js/chart.umd.min.js') }}"
+          onerror="var f=document.createElement('script');f.src='https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js';document.head.appendChild(f);this.onerror=null;">
+  </script>
   <script>
-    // Theme initialization
-    const savedTheme = localStorage.getItem('theme') || 'dark';
+    // Theme initialization — aligns with app.js localStorage key `helpdeskTheme`
+    const savedTheme = localStorage.getItem('helpdeskTheme') || 'dark';
     if (savedTheme === 'light') {
       document.documentElement.classList.add('light-theme');
+    } else if (savedTheme === 'kayfalah') {
+      document.documentElement.classList.add('kayfalah-theme');
     }
+    // dark is default (no class added)
   </script>
 </head>
 <body>
@@ -40,8 +47,8 @@
     </a>
     {% endif %}
     {% if current_user.is_engineer() or current_user.is_admin() %}
-    <a href="{{ url_for('engineer.attendance') }}" class="nav-link {% if 'attendance' in request.endpoint %}active{% endif %}">
-      <span class="nav-icon">🕐</span><span>Attendance</span>
+    <a href="{{ url_for('engineer.attendance') }}" class="nav-link {% if request.endpoint == 'engineer.attendance' %}active{% endif %}">
+      <span class="nav-icon">🕐</span><span>My Attendance</span>
     </a>
     {% endif %}
     {% if current_user.is_admin() %}
@@ -57,6 +64,9 @@
     </a>
     <a href="{{ url_for('admin.escalation_list') }}" class="nav-link {% if 'escalation' in request.endpoint %}active{% endif %}">
       <span class="nav-icon">🚨</span><span>Escalation</span>
+    </a>
+    <a href="{{ url_for('admin.attendance') }}" class="nav-link {% if request.endpoint == 'admin.attendance' %}active{% endif %}">
+      <span class="nav-icon">🕐</span><span>Attendance</span>
     </a>
     {% endif %}
   </nav>
@@ -82,10 +92,12 @@
       {% if current_user.is_engineer() or current_user.is_admin() %}
       <a href="{{ url_for('tickets.create') }}" class="btn btn-primary btn-sm">+ New Ticket</a>
       {% endif %}
-      <!-- Theme Toggle -->
-      <button class="notif-btn" id="themeToggleBtn" title="Toggle Theme">
-        🌓
-      </button>
+      <!-- Theme Selector -->
+      <div class="theme-toggle-group">
+        <button class="theme-btn" data-theme="dark" title="Dark Theme">🌙</button>
+        <button class="theme-btn" data-theme="light" title="Light Theme">☀️</button>
+        <button class="theme-btn" data-theme="kayfalah" title="Kayfalah Theme">🕌</button>
+      </div>
       <!-- Notifications -->
       <div class="notif-wrapper" id="notifWrapper">
         <button class="notif-btn" id="notifBtn">
@@ -97,6 +109,7 @@
           <div class="notif-header">
             <span>Notifications</span>
             <form method="POST" action="{{ url_for('main.mark_all_read') }}" style="display:inline">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
               <button type="submit" class="btn-link">Mark all read</button>
             </form>
           </div>
@@ -139,18 +152,7 @@
 </div>
 {% endif %}
 <script src="{{ url_for('static', filename='js/app.js') }}"></script>
-<script>
-  // Theme toggle listener
-  const themeToggleBtn = document.getElementById('themeToggleBtn');
-  if (themeToggleBtn) {
-    themeToggleBtn.addEventListener('click', () => {
-      const root = document.documentElement;
-      root.classList.toggle('light-theme');
-      const isLight = root.classList.contains('light-theme');
-      localStorage.setItem('theme', isLight ? 'light' : 'dark');
-    });
-  }
-</script>
+
 {% block scripts %}{% endblock %}
 </body>
 </html>
