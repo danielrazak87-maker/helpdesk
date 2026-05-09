@@ -60,12 +60,18 @@ const pal = ['#6366f1','#f59e0b','#10b981','#ef4444','#8b5cf6','#06b6d4'];
 const prData = {{ by_priority | tojson }};
 const stData = {{ by_status | tojson }};
 const catData = {{ by_category | tojson }};
-[['prChart',prData,'doughnut'],['stChart',stData,'bar'],['catChart',catData,'bar']].forEach(([id,data,type]) => {
-  new Chart(document.getElementById(id), {
-    type,
-    data: { labels: Object.keys(data).map(k=>k.replace('_',' ')), datasets: [{ data: Object.values(data), backgroundColor: pal, borderRadius: 6, borderWidth: 0 }] },
-    options: { plugins:{ legend:{ labels:{ color:'#a0aec0' }}}, scales: type==='bar' ? { y:{ticks:{color:'#a0aec0'}}, x:{ticks:{color:'#a0aec0'}} } : {} }
+if (typeof Chart === 'undefined') {
+  document.querySelectorAll('.charts-grid canvas').forEach(canvas => {
+    canvas.parentElement.innerHTML = '<div style="padding:40px;text-align:center;color:#ef4444;background:rgba(239,68,68,0.1);border-radius:8px;font-size:14px;">⚠️ Charts unavailable &mdash; Chart.js failed to load. Check your network or disable ad-blockers for this site.</div>';
   });
-});
+} else {
+  [['prChart',prData,'doughnut'],['stChart',stData,'bar'],['catChart',catData,'bar']].forEach(([id,data,type]) => {
+    new Chart(document.getElementById(id), {
+      type,
+      data: { labels: Object.keys(data).map(k=>k.replace('_',' ')), datasets: [{ data: Object.values(data), backgroundColor: pal, borderRadius: 6, borderWidth: 0 }] },
+      options: { plugins:{ legend:{ labels:{ color:'#a0aec0' }}}, scales: type==='bar' ? { y:{ticks:{color:'#a0aec0'}}, x:{ticks:{color:'#a0aec0'}} } : {} }
+    });
+  });
+}
 </script>
 {% endblock %}

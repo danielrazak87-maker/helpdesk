@@ -1,12 +1,12 @@
 {% extends "base.html" %}
-{% block title %}All Tickets — Admin{% endblock %}
+{% block title %}All Tickets — KF Helpdesk{% endblock %}
 {% block content %}
 <div class="page-header">
   <h1 class="page-title">All Tickets</h1>
   <a href="{{ url_for('tickets.create') }}" class="btn btn-primary">+ New Ticket</a>
 </div>
 <div class="card filter-bar">
-  <form method="GET" class="filter-form">
+  <form method="GET" class="filter-form" id="filter-form">
     <select name="status" class="form-control form-control-sm" onchange="this.form.submit()">
       <option value="">All Statuses</option>
       {% for s in statuses %}<option value="{{ s }}" {% if s==status_filter %}selected{% endif %}>{{ s.replace('_',' ').title() }}</option>{% endfor %}
@@ -18,35 +18,98 @@
     <a href="{{ url_for('admin.all_tickets') }}" class="btn btn-ghost btn-sm">Clear</a>
   </form>
 </div>
+
 <div class="card">
-  <div class="table-wrap">
-    <table class="table">
-      <thead><tr><th>Ticket #</th><th>Title</th><th>Priority</th><th>Status</th><th>SLA</th><th>Created By</th><th>Assigned To</th><th>Created</th><th></th></tr></thead>
-      <tbody>
-        {% for t in tickets.items %}
-        <tr>
-          <td><span class="ticket-num">{{ t.ticket_number }}</span></td>
-          <td>{{ t.title[:45] }}{% if t.title|length > 45 %}...{% endif %}</td>
-          <td><span class="badge badge-priority-{{ t.priority }}">{{ t.priority.title() }}</span></td>
-          <td><span class="badge badge-status-{{ t.status }}">{{ t.status.replace('_',' ').title() }}</span></td>
-          <td><span class="sla-dot sla-{{ t.sla_status() }}">{% if t.sla_status()=='breached' %}🔴{% elif t.sla_status()=='warning' %}⚠️{% elif t.sla_status()=='resolved' %}✓{% else %}✅{% endif %}</span></td>
-          <td>{{ t.creator.full_name if t.creator else '—' }}</td>
-          <td>{{ t.assignee.full_name if t.assignee else '—' }}</td>
-          <td class="text-muted text-sm">{{ t.created_at.strftime('%d %b %H:%M') }}</td>
-          <td><a href="{{ url_for('tickets.detail', ticket_id=t.id) }}" class="btn btn-ghost btn-xs">View →</a></td>
-        </tr>
-        {% else %}
-        <tr><td colspan="9" class="empty-state">No tickets found.</td></tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  </div>
+  <form method="POST" id="bulk-form">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+    
+    {# Bulk action bar — shown when checkboxes are selected #}
+    <div id="bulk-bar" style="display:none; padding:.625rem 1rem; border-bottom:1px solid var(--border); background:rgba(236,131,5,.06);">
+      <div style="display:flex; align-items:center; gap:.75rem; flex-wrap:wrap;">
+        <span id="selected-count" style="font-size:.875rem;font-weight:600;color:var(--accent);">0 selected</span>
+        <button type="submit" formaction="{{ url_for('admin.bulk_close_tickets') }}" class="btn btn-sm" style="background:#ef4444;color:#fff;" onclick="return confirm('Close selected tickets?')">✕ Close Selected</button>
+        <div style="display:flex;align-items:center;gap:.5rem;">
+          <select name="engineer_id" class="form-control form-control-sm" style="width:auto;min-width:160px;">
+            <option value="">— Assign to Engineer —</option>
+            {% for eng in engineers %}
+            <option value="{{ eng.id }}">{{ eng.full_name }}</option>
+            {% endfor %}
+          </select>
+          <button type="submit" formaction="{{ url_for('admin.bulk_assign_tickets') }}" class="btn btn-sm btn-primary">⇨ Assign</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="table-wrap">
+      <table class="table">
+        <thead>
+          <tr>
+            <th style="width:36px;"><input type="checkbox" id="select-all" onchange="toggleAll(this.checked)"/></th>
+            <th>Ticket #</th><th>Title</th><th>Priority</th><th>Status</th><th>SLA</th>
+            <th>Created By</th><th>Assigned To</th><th>Created</th><th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for t in tickets.items %}
+          <tr>
+            <td><input type="checkbox" name="ticket_ids" value="{{ t.id }}" class="ticket-cb" onchange="updateBulkBar()"/></td>
+            <td><span class="ticket-num">{{ t.ticket_number }}</span></td>
+            <td>{{ t.title[:45] }}{% if t.title|length > 45 %}...{% endif %}</td>
+            <td><span class="badge badge-priority-{{ t.priority }}">{{ t.priority.title() }}</span></td>
+            <td><span class="badge badge-status-{{ t.status }}">{{ t.status.replace('_',' ').title() }}</span></td>
+            <td><span class="sla-dot sla-{{ t.sla_status() }}">{% if t.sla_status()=='breached' %}🔴{% elif t.sla_status()=='warning' %}⚠️{% elif t.sla_status()=='resolved' %}✓{% else %}✅{% endif %}</span></td>
+            <td>{{ t.creator.full_name if t.creator else '—' }}</td>
+            <td>{{ t.assignee.full_name if t.assignee else '—' }}</td>
+            <td class="text-muted text-sm">{{ t.created_at.strftime('%d %b %H:%M') }}</td>
+            <td><a href="{{ url_for('tickets.detail', ticket_id=t.id) }}" class="btn btn-ghost btn-xs">View →</a></td>
+          </tr>
+          {% else %}
+          <tr><td colspan="10"><div class="empty-state">
+            <div class="empty-icon" style="font-size:3rem;margin-bottom:.5rem;">🎫</div>
+            <div style="font-weight:600;margin-bottom:.25rem;">No tickets found</div>
+            <div class="text-muted" style="margin-bottom:1rem;">{% if status_filter or priority_filter %}Try clearing your filters.{% else %}No tickets have been created yet.{% endif %}</div>
+            {% if not status_filter and not priority_filter %}<a href="{{ url_for('tickets.create') }}" class="btn btn-primary">+ Create Ticket</a>{% endif %}
+          </div></td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </form>
+
   {% if tickets.pages > 1 %}
   <div class="pagination">
-    {% if tickets.has_prev %}<a href="{{ url_for('admin.all_tickets', page=tickets.prev_num) }}" class="btn btn-ghost btn-sm">← Prev</a>{% endif %}
+    {% if tickets.has_prev %}<a href="{{ url_for('admin.all_tickets', page=tickets.prev_num, status=status_filter, priority=priority_filter) }}" class="btn btn-ghost btn-sm">← Prev</a>{% endif %}
     <span class="page-info">Page {{ tickets.page }} of {{ tickets.pages }}</span>
-    {% if tickets.has_next %}<a href="{{ url_for('admin.all_tickets', page=tickets.next_num) }}" class="btn btn-ghost btn-sm">Next →</a>{% endif %}
+    {% if tickets.has_next %}<a href="{{ url_for('admin.all_tickets', page=tickets.next_num, status=status_filter, priority=priority_filter) }}" class="btn btn-ghost btn-sm">Next →</a>{% endif %}
   </div>
   {% endif %}
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function toggleAll(checked) {
+  document.querySelectorAll('.ticket-cb').forEach(cb => cb.checked = checked);
+  updateBulkBar();
+}
+function updateBulkBar() {
+  const checked = document.querySelectorAll('.ticket-cb:checked').length;
+  const bar = document.getElementById('bulk-bar');
+  const count = document.getElementById('selected-count');
+  if (checked > 0) {
+    bar.style.display = 'block';
+    count.textContent = checked + ' selected';
+  } else {
+    bar.style.display = 'none';
+  }
+}
+// Uncheck select-all if any individual checkbox is unchecked
+document.querySelectorAll('.ticket-cb').forEach(cb => {
+  cb.addEventListener('change', function() {
+    const all = document.querySelectorAll('.ticket-cb');
+    const checked = document.querySelectorAll('.ticket-cb:checked');
+    document.getElementById('select-all').checked = all.length === checked.length;
+  });
+});
+</script>
 {% endblock %}

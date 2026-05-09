@@ -1,4 +1,6 @@
-from flask import Blueprint, render_template, redirect, url_for
+from __future__ import annotations
+
+from flask import Blueprint, render_template, redirect, url_for, request, jsonify
 from flask_login import login_required, current_user
 from app.models.ticket import Ticket
 from app.models.user import User
@@ -36,7 +38,7 @@ def mark_all_read():
 
 @main_bp.route('/notifications/<int:nid>/read')
 @login_required
-def mark_notification_read(nid):
+def mark_notification_read(nid: int):
     n = Notification.query.get_or_404(nid)
     if n.user_id == current_user.id:
         n.is_read = True
@@ -44,3 +46,47 @@ def mark_notification_read(nid):
     if n.ticket_id:
         return redirect(url_for('tickets.detail', ticket_id=n.ticket_id))
     return redirect(url_for('main.dashboard'))
+
+
+# ─── Global Search ────────────────────────────────────────────────────────────
+
+@main_bp.route('/search')
+@login_required
+def search():
+    q = request.args.get('q', '').strip()
+    if len(q) < 2:
+        return jsonify({'results': []})
+
+    if current_user.is_admin():
+        base = Ticket.query
+    elif current_user.is_engineer():
+        base = Ticket.query.filter_by(assigned_to=current_user.id)
+    else:
+        base = Ticket.query.filter_by(project=current_user.project)
+
+    results = (
+        base.filter(
+            db.or_(
+                Ticket.ticket_number.ilike(f'%{q}%'),
+                Ticket.title.ilike(f'%{q}%'),
+                Ticket.description.ilike(f'%{q}%')
+            )
+        )
+        .order_by(Ticket.created_at.desc())
+        .limit(10)
+        .all()
+    )
+
+    return jsonify({
+        'results': [
+            {
+                'id': t.id,
+                'ticket_number': t.ticket_number,
+                'title': t.title,
+                'status': t.status.replace('_', ' ').title(),
+                'priority': t.priority,
+                'url': url_for('tickets.detail', ticket_id=t.id)
+            }
+            for t in results
+        ]
+    })

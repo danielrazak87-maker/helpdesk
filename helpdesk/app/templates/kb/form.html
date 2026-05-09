@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block title %}{% if article %}Edit{% else %}Create{% endif %} Article{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    {% if article %}Edit{% else %}Create New{% endif %} Article
+                </div>
+                <div class="card-body">
+                    <form method="POST">
+                        {{ csrf_token() }}
+                        <div class="form-group">
+                            <label>Title</label>
+                            <input type="text" name="title" class="form-control" 
+                                   value="{{ article.title if article else '' }}" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Content</label>
+                            <textarea name="content" class="form-control" rows="15" required>{{ article.content if article else '' }}</textarea>
+                        </div>
+                        <div class="form-group">
+                            <label>Category</label>
+                            <select name="category_id" class="form-control">
+                                <option value="">Uncategorized</option>
+                                {% for cat in categories %}
+                                <option value="{{ cat.id }}" {% if article and article.category_id == cat.id %}selected{% endif %}>
+                                    {{ cat.name }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Tags (comma-separated)</label>
+                            <input type="text" name="tags" class="form-control" 
+                                   value="{{ article.tags if article else '' }}" placeholder="e.g. network, setup, guide">
+                        </div>
+                        <div class="form-check mb-3">
+                            <input type="checkbox" name="is_published" class="form-check-input" 
+                                   id="is_published" {% if not article or article.is_published %}checked{% endif %}>
+                            <label class="form-check-label" for="is_published">Published</label>
+                        </div>
+                        <div class="form-check mb-3">
+                            <input type="checkbox" name="is_internal" class="form-check-input" 
+                                   id="is_internal" {% if article and article.is_internal %}checked{% endif %}>
+                            <label class="form-check-label" for="is_internal">Internal Only (visible to staff only)</label>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Save</button>
+                        <a href="{{ url_for('kb.list_articles') }}" class="btn btn-secondary">Cancel</a>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

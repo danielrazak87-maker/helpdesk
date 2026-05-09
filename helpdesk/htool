@@ -1,0 +1,166 @@
+#!/bin/bash
+# htool — Helpdesk CLI Tool
+# Usage: ./htool <command> [args]
+# Commands: create, assign, comment, status, close, checkin, checkout, list
+
+set -euo pipefail
+
+APP_DIR="/root/rd_workspace/code/helpdesk/helpdesk"
+cd "$APP_DIR"
+VENV_PYTHON="$APP_DIR/venv/bin/python3"
+
+CMD="${1:-help}"
+shift || true
+
+case "$CMD" in
+    create)
+        # htool create --title "x" --desc "y" --priority low --project R&D --assign reviewer
+        TITLE=""; DESC=""; PRIORITY="low"; PROJECT="R&D"; ASSIGN=""
+        while [ $# -gt 0 ]; do
+            case "$1" in --title) TITLE="$2"; shift 2;; --desc) DESC="$2"; shift 2;;
+            --priority) PRIORITY="$2"; shift 2;; --project) PROJECT="$2"; shift 2;;
+            --assign) ASSIGN="$2"; shift 2;; *) shift;; esac
+        done
+        $VENV_PYTHON -c "
+from app import create_app, db; from app.models.user import User; from app.models.ticket import Ticket
+from datetime import datetime
+app = create_app()
+with app.app_context():
+    admin = User.query.filter_by(email='admin@helpdesk.com').first()
+    assignee = User.query.filter_by(email='${ASSIGN}@kayfalah.com').first() if '$ASSIGN' else None
+    t = Ticket(ticket_number=Ticket.generate_ticket_number(),
+        title='$TITLE', description='$DESC', status='open',
+        priority='$PRIORITY', category='General', project='$PROJECT',
+        created_by=admin.id, assigned_to=assignee.id if assignee else None,
+        created_at=datetime.utcnow(), updated_at=datetime.utcnow())
+    db.session.add(t); db.session.commit()
+    print('HD-' + t.ticket_number.split('-',1)[1])
+"
+        ;;
+    
+    assign)
+        TICKET="$1"; EMAIL="$2"
+        $VENV_PYTHON -c "
+from app import create_app, db; from app.models.user import User; from app.models.ticket import Ticket
+app = create_app()
+with app.app_context():
+    u = User.query.filter_by(email='$EMAIL').first()
+    t = Ticket.query.filter(Ticket.ticket_number.like('%$TICKET')).first()
+    t.assigned_to = u.id; t.updated_at = __import__('datetime').datetime.utcnow()
+    db.session.commit(); print('Assigned to', u.full_name)
+"
+        ;;
+    
+    comment)
+        # htool comment HD-xxx "text here"
+        TICKET="$1"; shift; TEXT="$*"
+        $VENV_PYTHON -c "
+from app import create_app, db; from app.models.user import User; from app.models.ticket import Ticket, TicketComment
+from datetime import datetime
+app = create_app()
+with app.app_context():
+    admin = User.query.filter_by(email='admin@helpdesk.com').first()
+    t = Ticket.query.filter(Ticket.ticket_number.like('%$TICKET')).first()
+    c = TicketComment(ticket_id=t.id, user_id=admin.id, content='$TEXT', created_at=datetime.utcnow())
+    db.session.add(c); db.session.commit(); print('Comment added')
+"
+        ;;
+    
+    status)
+        TICKET="$1"; STATUS="$2"
+        $VENV_PYTHON -c "
+from app import create_app, db; from app.models.ticket import Ticket
+from datetime import datetime
+app = create_app()
+with app.app_context():
+    t = Ticket.query.filter(Ticket.ticket_number.like('%$TICKET')).first()
+    t.status = '$STATUS'; t.updated_at = datetime.utcnow()
+    if '$STATUS' == 'resolved': t.resolved_at = datetime.utcnow()
+    db.session.commit(); print('Status ->', '$STATUS')
+"
+        ;;
+    
+    close)
+        # htool close HD-xxx "summary comment"
+        TICKET="$1"; shift; COMMENT="$*"
+        $VENV_PYTHON -c "
+from app import create_app, db; from app.models.ticket import Ticket, TicketComment
+from app.models.user import User; from app.models.attendance import Attendance
+from datetime import datetime
+app = create_app()
+with app.app_context():
+    admin = User.query.filter_by(email='admin@helpdesk.com').first()
+    t = Ticket.query.filter(Ticket.ticket_number.like('%$TICKET')).first()
+    t.status = 'resolved'; t.resolved_at = datetime.utcnow(); t.updated_at = datetime.utcnow()
+    if '$COMMENT':
+        c = TicketComment(ticket_id=t.id, user_id=admin.id, content='$COMMENT', created_at=datetime.utcnow())
+        db.session.add(c)
+    # Check out assignee if open attendance
+    if t.assigned_to:
+        att = Attendance.query.filter_by(engineer_id=t.assigned_to, check_out=None).first()
+        if att: att.check_out = datetime.utcnow()
+    db.session.commit(); print('Ticket', '$TICKET', 'closed')
+"
+        ;;
+    
+    checkin)
+        EMAIL="$1"
+        $VENV_PYTHON -c "
+from app import create_app, db; from app.models.user import User; from app.models.attendance import Attendance
+from datetime import datetime, date
+app = create_app()
+with app.app_context():
+    u = User.query.filter_by(email='$EMAIL').first()
+    att = Attendance.query.filter_by(engineer_id=u.id, work_date=date.today()).first()
+    if att and att.check_out:
+        att.check_in = datetime.utcnow(); att.check_out = None
+    elif not att:
+        att = Attendance(engineer_id=u.id, work_date=date.today(), check_in=datetime.utcnow(), status='present')
+        db.session.add(att)
+    db.session.commit(); print(u.full_name, 'checked in')
+"
+        ;;
+    
+    checkout)
+        EMAIL="$1"
+        $VENV_PYTHON -c "
+from app import create_app, db; from app.models.user import User; from app.models.attendance import Attendance
+from datetime import datetime
+app = create_app()
+with app.app_context():
+    u = User.query.filter_by(email='$EMAIL').first()
+    att = Attendance.query.filter_by(engineer_id=u.id, check_out=None).first()
+    if att: att.check_out = datetime.utcnow(); db.session.commit(); print(u.full_name, 'checked out')
+    else: print('No open attendance')
+"
+        ;;
+    
+    list)
+        $VENV_PYTHON -c "
+from app import create_app, db; from app.models.ticket import Ticket, TicketComment
+app = create_app()
+with app.app_context():
+    for t in Ticket.query.order_by(Ticket.id).all():
+        c = TicketComment.query.filter_by(ticket_id=t.id).count()
+        print('%s [%s] %s (%d comments)' % (t.ticket_number.ljust(24), t.status.ljust(12), t.title[:55], c))
+"
+        ;;
+    
+    backup)
+        echo "[htool] Running PostgreSQL backup..."
+        /root/rd_workspace/scripts/pg_backup.sh
+        ;;
+    
+    help)
+        echo "htool — Helpdesk CLI"
+        echo "Usage:"
+        echo "  create   --title 'x' [--desc 'y'] [--priority low] [--project R&D] [--assign reviewer]"
+        echo "  assign   <ticket_id> <email>"
+        echo "  comment  <ticket_id> <text>"
+        echo "  status   <ticket_id> <new_status>"
+        echo "  close    <ticket_id> [comment text]"
+        echo "  checkin  <email>"
+        echo "  checkout <email>"
+        echo "  backup   — run a manual PostgreSQL backup"
+        ;;
+esac

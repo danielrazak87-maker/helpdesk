@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}SLA Policies — Admin{% endblock %}
+{% block title %}SLA Policies — Kayfalah Helpdesk{% endblock %}
 {% block content %}
 <div class="page-header">
   <h1 class="page-title">SLA Policies</h1>
@@ -19,6 +19,13 @@
           <td>{% if p.escalate_on_breach %}<span class="badge badge-success">Yes</span>{% else %}<span class="badge badge-muted">No</span>{% endif %}</td>
           <td><a href="{{ url_for('admin.edit_sla', policy_id=p.id) }}" class="btn btn-ghost btn-xs">Edit</a></td>
         </tr>
+        {% else %}
+        <tr><td colspan="6"><div class="empty-state">
+          <div class="empty-icon" style="font-size:3rem;margin-bottom:.5rem;">⏱️</div>
+          <div style="font-weight:600;margin-bottom:.25rem;">No SLA policies defined</div>
+          <div class="text-muted" style="margin-bottom:1rem;">Create your first SLA policy to automate response and resolution times.</div>
+          <a href="{{ url_for('admin.create_sla') }}" class="btn btn-primary">+ Add Policy</a>
+        </div></td></tr>
         {% endfor %}
       </tbody>
     </table>

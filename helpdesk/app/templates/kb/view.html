@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% block title %}{{ article.title }} - Knowledge Base{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row">
+        <div class="col-md-9">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h2>{{ article.title }}</h2>
+                    <div>
+                        {% if article.is_internal %}
+                        <span class="badge badge-warning">Internal Only</span>
+                        {% endif %}
+                        {% if current_user.is_authenticated and not current_user.is_user() %}
+                        <a href="{{ url_for('kb.edit_article', article_id=article.id) }}" class="btn btn-sm btn-primary">Edit</a>
+                        <form method="POST" action="{{ url_for('kb.delete_article', article_id=article.id) }}" class="d-inline">
+                            <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Delete this article?')">Delete</button>
+                        </form>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="text-muted mb-3">
+                        <small>
+                            By {{ article.author.full_name }} | 
+                            {{ article.created_at.strftime('%d %b %Y %H:%M') }} |
+                            Category: {{ article.category.name if article.category else 'Uncategorized' }} |
+                            Views: {{ article.view_count }}
+                        </small>
+                    </div>
+                    {% if article.tags %}
+                    <div class="mb-3">
+                        {% for tag in article.tags.split(',') %}
+                        <span class="badge badge-info">{{ tag.strip() }}</span>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                    <div class="article-content">
+                        {{ article.content|safe }}
+                    </div>
+                </div>
+                <div class="card-footer">
+                    <a href="{{ url_for('kb.list_articles') }}" class="btn btn-secondary">← Back to Knowledge Base</a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-header">Categories</div>
+                <div class="list-group list-group-flush">
+                    {% for cat in categories %}
+                    <a href="{{ url_for('kb.category_articles', slug=cat.slug) }}" class="list-group-item">{{ cat.name }}</a>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

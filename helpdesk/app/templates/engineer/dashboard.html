@@ -11,6 +11,7 @@
     {% if attendance_today and attendance_today.is_checked_in() %}
     <div class="attendance-status status-in">● Checked In <span class="text-sm text-muted">{{ attendance_today.check_in.strftime('%H:%M') }}</span></div>
     <form method="POST" action="{{ url_for('engineer.do_check_out') }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
       <button type="submit" class="btn btn-danger btn-sm">Check Out</button>
     </form>
     {% elif attendance_today and attendance_today.check_out %}
@@ -18,6 +19,7 @@
     {% else %}
     <div class="attendance-status status-out">● Not Checked In</div>
     <form method="POST" action="{{ url_for('engineer.do_check_in') }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
       <button type="submit" class="btn btn-success btn-sm">Check In</button>
     </form>
     {% endif %}
@@ -72,7 +74,11 @@
           <td><a href="{{ url_for('tickets.detail', ticket_id=t.id) }}" class="btn btn-ghost btn-xs">Open →</a></td>
         </tr>
         {% else %}
-        <tr><td colspan="7" class="empty-state">No tickets assigned.</td></tr>
+        <tr><td colspan="7"><div class="empty-state">
+          <div class="empty-icon" style="font-size:3rem;margin-bottom:.5rem;">🎉</div>
+          <div style="font-weight:600;margin-bottom:.25rem;">No tickets assigned</div>
+          <div class="text-muted">You're all caught up! Check back later for new assignments.</div>
+        </div></td></tr>
         {% endfor %}
       </tbody>
     </table>

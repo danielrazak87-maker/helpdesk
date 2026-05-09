@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block title %}Setup 2FA - Kayfalah Helpdesk{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h4>Setup Two-Factor Authentication</h4>
+                </div>
+                <div class="card-body text-center">
+                    {% if setup_done %}
+                        <h5 style="color:var(--success)">✅ 2FA has been enabled!</h5>
+                        <p>Store these backup codes in a safe place. <strong>Each can be used once</strong> if you lose access to your authenticator app.</p>
+                        <div class="bg-light p-3 rounded" style="text-align:left;display:inline-block">
+                            {% for code in backup_codes %}
+                            <code>{{ code }}</code><br>
+                            {% endfor %}
+                        </div>
+                        <hr>
+                        <a href="{{ url_for('auth.profile') }}" class="btn btn-primary">Back to Profile</a>
+                    {% else %}
+                        <p>Scan this QR code with your authenticator app (Google Authenticator, Authy, etc.)</p>
+                        <div class="mb-4">
+                            <img src="{{ qr_uri }}" alt="2FA QR Code" class="img-fluid" style="max-width: 200px;">
+                        </div>
+                        <p>Or enter this manual key: <strong>{{ secret }}</strong></p>
+                        <hr>
+                        <form method="POST">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                            <div class="form-group">
+                                <label>Enter 6-digit code from your app</label>
+                                <input type="text" name="code" class="form-control text-center" 
+                                       placeholder="123456" pattern="\d{6}" maxlength="6" required>
+                            </div>
+                            <button type="submit" class="btn btn-primary btn-block">Verify & Enable 2FA</button>
+                        </form>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,93 @@
+{% extends "base.html" %}
+{% block title %}Attendance — All Members — Kayfalah Helpdesk{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Attendance — All Members</h1>
+    <p class="text-muted">View check-in / check-out records for every engineer, R&amp;D member, and worker.</p>
+  </div>
+  <div class="month-nav">
+    <a href="{{ url_for('admin.attendance', month=month-1 if month>1 else 12, year=year if month>1 else year-1) }}" class="btn btn-ghost btn-sm">← Prev</a>
+    <span class="month-label">{{ ['','January','February','March','April','May','June','July','August','September','October','November','December'][month] }} {{ year }}</span>
+    <a href="{{ url_for('admin.attendance', month=month+1 if month<12 else 1, year=year if month<12 else year+1) }}" class="btn btn-ghost btn-sm">Next →</a>
+  </div>
+</div>
+
+<!-- Summary KPI Cards -->
+<div class="kpi-grid kpi-grid-3">
+  <div class="kpi-card kpi-green">
+    <div class="kpi-icon">👥</div>
+    <div class="kpi-value">{{ member_data|length }}</div>
+    <div class="kpi-label">Active Members</div>
+  </div>
+  <div class="kpi-card kpi-blue">
+    <div class="kpi-icon">📅</div>
+    <div class="kpi-value">{{ total_present_all }}</div>
+    <div class="kpi-label">Total Present Days</div>
+  </div>
+  <div class="kpi-card kpi-purple">
+    <div class="kpi-icon">⏰</div>
+    <div class="kpi-value">{{ total_hours_all }}</div>
+    <div class="kpi-label">Total Hours</div>
+  </div>
+</div>
+
+<!-- Per-Member Summary + Records -->
+{% for item in member_data %}
+<div class="card" style="margin-bottom:1rem">
+  <div class="card-header">
+    <strong>{{ item.engineer.full_name }}</strong>
+    <span class="badge badge-{{ item.engineer.role }}">{{ item.engineer.role.title() }}</span>
+    <div class="header-badges">
+      <span class="badge badge-success">{{ item.present_days }} days present</span>
+      <span class="badge badge-info">{{ item.total_hours }}h total</span>
+      {% if item.records %}
+      <span class="badge badge-attendance-present">⌀ {{ (item.total_hours / item.present_days)|round(1) if item.present_days else 0 }}h/day</span>
+      {% endif %}
+    </div>
+  </div>
+  {% if item.records %}
+  <div class="table-wrap">
+    <table class="table table-compact">
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>Status</th>
+          <th>Check In</th>
+          <th>Check Out</th>
+          <th>Hours</th>
+          <th>Notes</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in item.records %}
+        <tr>
+          <td>{{ r.work_date.strftime('%a, %d %b %Y') }}</td>
+          <td><span class="badge badge-attendance-{{ r.status }}">{{ r.status.replace('_',' ').title() }}</span></td>
+          <td>{{ r.check_in.strftime('%H:%M') if r.check_in else '—' }}</td>
+          <td>{{ r.check_out.strftime('%H:%M') if r.check_out else '—' }}</td>
+          <td>{{ r.working_hours() }}h</td>
+          <td class="text-muted text-sm">{{ r.notes or '—' }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="empty-state" style="padding:1rem">
+    <div class="text-muted">No attendance records this month.</div>
+  </div>
+  {% endif %}
+</div>
+{% endfor %}
+
+{% if not member_data %}
+<div class="card">
+  <div class="empty-state">
+    <div class="empty-icon" style="font-size:3rem;margin-bottom:.5rem;">👥</div>
+    <div style="font-weight:600;margin-bottom:.25rem;">No members found</div>
+    <div class="text-muted">No active engineers or workers are registered yet.</div>
+  </div>
+</div>
+{% endif %}
+{% endblock %}

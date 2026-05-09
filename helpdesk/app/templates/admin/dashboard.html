@@ -83,6 +83,11 @@
           <td>{{ t.assignee.full_name if t.assignee else '—' }}</td>
           <td class="text-muted text-sm">{{ t.created_at.strftime('%d %b %H:%M') }}</td>
         </tr>
+        {% else %}
+        <tr><td colspan="7"><div class="empty-state">
+          <div class="empty-icon" style="font-size:2rem;margin-bottom:.25rem;">📭</div>
+          <div>No tickets created yet.</div>
+        </div></td></tr>
         {% endfor %}
       </tbody>
     </table>
@@ -106,6 +111,11 @@
             </div>
           </td>
         </tr>
+        {% else %}
+        <tr><td colspan="3"><div class="empty-state">
+          <div class="empty-icon" style="font-size:2rem;margin-bottom:.25rem;">👷</div>
+          <div>No engineers configured yet.</div>
+        </div></td></tr>
         {% endfor %}
       </tbody>
     </table>
@@ -123,31 +133,37 @@ const workloadData = {
 
 const palette = ['#6366f1','#f59e0b','#10b981','#ef4444','#8b5cf6','#06b6d4','#f97316'];
 
-new Chart(document.getElementById('priorityChart'), {
-  type: 'doughnut',
-  data: {
-    labels: Object.keys(priorityData).map(k => k.charAt(0).toUpperCase() + k.slice(1)),
-    datasets: [{ data: Object.values(priorityData), backgroundColor: palette, borderWidth: 0 }]
-  },
-  options: { plugins: { legend: { labels: { color: '#a0aec0' } } } }
-});
+if (typeof Chart === 'undefined') {
+  document.querySelectorAll('.charts-grid canvas').forEach(c => {
+    c.parentElement.innerHTML = '<div style="padding:40px;text-align:center;color:#ef4444;background:rgba(239,68,68,0.1);border-radius:8px;font-size:14px;">⚠️ Charts unavailable &mdash; Chart.js failed to load.</div>';
+  });
+} else {
+  new Chart(document.getElementById('priorityChart'), {
+    type: 'doughnut',
+    data: {
+      labels: Object.keys(priorityData).map(k => k.charAt(0).toUpperCase() + k.slice(1)),
+      datasets: [{ data: Object.values(priorityData), backgroundColor: palette, borderWidth: 0 }]
+    },
+    options: { plugins: { legend: { labels: { color: '#a0aec0' } } } }
+  });
 
-new Chart(document.getElementById('statusChart'), {
-  type: 'bar',
-  data: {
-    labels: Object.keys({{ by_status | default({}) | tojson }}).map(k => k.replace('_',' ')),
-    datasets: [{ data: Object.values({{ by_status | default({}) | tojson }}), backgroundColor: palette, borderRadius: 6, borderWidth: 0 }]
-  },
-  options: { plugins: { legend: { display: false } }, scales: { y: { ticks: { color: '#a0aec0' } }, x: { ticks: { color: '#a0aec0' } } } }
-});
+  new Chart(document.getElementById('statusChart'), {
+    type: 'bar',
+    data: {
+      labels: Object.keys({{ by_status | default({}) | tojson }}).map(k => k.replace('_',' ')),
+      datasets: [{ data: Object.values({{ by_status | default({}) | tojson }}), backgroundColor: palette, borderRadius: 6, borderWidth: 0 }]
+    },
+    options: { plugins: { legend: { display: false } }, scales: { y: { ticks: { color: '#a0aec0' } }, x: { ticks: { color: '#a0aec0' } } } }
+  });
 
-new Chart(document.getElementById('workloadChart'), {
-  type: 'bar',
-  data: {
-    labels: workloadData.labels,
-    datasets: [{ data: workloadData.values, backgroundColor: '#6366f1', borderRadius: 6, borderWidth: 0 }]
-  },
-  options: { plugins: { legend: { display: false } }, scales: { y: { ticks: { color: '#a0aec0' } }, x: { ticks: { color: '#a0aec0' } } } }
-});
+  new Chart(document.getElementById('workloadChart'), {
+    type: 'bar',
+    data: {
+      labels: workloadData.labels,
+      datasets: [{ data: workloadData.values, backgroundColor: '#6366f1', borderRadius: 6, borderWidth: 0 }]
+    },
+    options: { plugins: { legend: { display: false } }, scales: { y: { ticks: { color: '#a0aec0' } }, x: { ticks: { color: '#a0aec0' } } } }
+  });
+}
 </script>
 {% endblock %}

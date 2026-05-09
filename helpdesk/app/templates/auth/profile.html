@@ -14,6 +14,7 @@
       </div>
     </div>
     <form method="POST" action="{{ url_for('auth.profile') }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
       <div class="form-group">
         <label>Full Name</label>
         <input name="full_name" class="form-control" value="{{ current_user.full_name }}" required/>
@@ -42,6 +43,23 @@
       </div>
       <button type="submit" class="btn btn-primary">Save Changes</button>
     </form>
+  </div>
+  
+  <!-- 2FA Section -->
+  <div class="card" style="margin-top: 2rem;">
+    <div class="card-header"><h3>Two-Factor Authentication</h3></div>
+    <div class="card-body">
+      {% if current_user.is_2fa_enabled %}
+        <p style="color: var(--green);">✅ 2FA is currently <strong>enabled</strong>.</p>
+        <form method="POST" action="{{ url_for('auth.two_factor_disable') }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+          <button type="submit" class="btn btn-danger" style="margin-top: 0.5rem;">Disable 2FA</button>
+        </form>
+      {% else %}
+        <p>Protect your account with Two-Factor Authentication.</p>
+        <a href="{{ url_for('auth.two_factor_setup') }}" class="btn btn-primary" style="display:inline-block;margin-top:0.5rem;">Enable 2FA</a>
+      {% endif %}
+    </div>
   </div>
 </div>
 {% endblock %}

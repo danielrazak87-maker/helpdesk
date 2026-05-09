@@ -1,10 +1,10 @@
-from app import db
+from app import db, utcnow
 from datetime import datetime
 import random
 import string
 
 
-TICKET_STATUSES = ['open', 'in_progress', 'pending', 'resolved', 'closed']
+TICKET_STATUSES = ['open', 'in_progress', 'pending', 'review', 'resolved', 'closed']
 TICKET_PRIORITIES = ['critical', 'high', 'medium', 'low']
 TICKET_CATEGORIES = ['network', 'hardware', 'software', 'security', 'account', 'other']
 
@@ -23,6 +23,7 @@ class Ticket(db.Model):
 
     created_by = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     assigned_to = db.Column(db.Integer, db.ForeignKey('users.id'))
+    original_assignee = db.Column(db.Integer, db.ForeignKey('users.id'))  # saved before review reassignment
 
     sla_policy_id = db.Column(db.Integer, db.ForeignKey('sla_policies.id'))
     sla_response_due = db.Column(db.DateTime)
@@ -34,8 +35,8 @@ class Ticket(db.Model):
     rating = db.Column(db.Integer)  # 1-5 from user feedback
     feedback = db.Column(db.Text)
 
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=utcnow)
+    updated_at = db.Column(db.DateTime, default=utcnow, onupdate=utcnow)
     resolved_at = db.Column(db.DateTime)
     closed_at = db.Column(db.DateTime)
 
@@ -44,7 +45,7 @@ class Ticket(db.Model):
 
     @staticmethod
     def generate_ticket_number():
-        date_str = datetime.utcnow().strftime('%Y%m%d')
+        date_str = utcnow().strftime('%Y%m%d')
         suffix = ''.join(random.choices(string.ascii_uppercase + string.digits, k=4))
         return f'HD-{date_str}-{suffix}'
 
@@ -56,7 +57,7 @@ class Ticket(db.Model):
             return 'breached'
         if not self.sla_resolution_due:
             return 'on_track'
-        now = datetime.utcnow()
+        now = utcnow()
         total = (self.sla_resolution_due - self.created_at).total_seconds()
         elapsed = (now - self.created_at).total_seconds()
         if total > 0 and elapsed / total >= 0.75:
@@ -66,7 +67,7 @@ class Ticket(db.Model):
     def sla_percent(self):
         if not self.sla_resolution_due:
             return 0
-        now = datetime.utcnow()
+        now = utcnow()
         total = (self.sla_resolution_due - self.created_at).total_seconds()
         elapsed = (now - self.created_at).total_seconds()
         if total <= 0:
@@ -76,7 +77,7 @@ class Ticket(db.Model):
     def sla_remaining_mins(self):
         if not self.sla_resolution_due:
             return None
-        delta = self.sla_resolution_due - datetime.utcnow()
+        delta = self.sla_resolution_due - utcnow()
         return int(delta.total_seconds() / 60)
 
     def resolution_time_mins(self):
@@ -96,7 +97,7 @@ class TicketComment(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     content = db.Column(db.Text, nullable=False)
     is_internal = db.Column(db.Boolean, default=False)  # internal notes not visible to users
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=utcnow)
 
     def __repr__(self):
         return f'<TicketComment Ticket#{self.ticket_id}>'
@@ -111,7 +112,7 @@ class TicketHistory(db.Model):
     field_changed = db.Column(db.String(50))
     old_value = db.Column(db.String(200))
     new_value = db.Column(db.String(200))
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=utcnow)
 
     changer = db.relationship('User', foreign_keys=[changed_by])
 

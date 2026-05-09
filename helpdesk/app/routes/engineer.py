@@ -1,7 +1,10 @@
+from __future__ import annotations
+
 from flask import Blueprint, render_template, redirect, url_for, flash, request, abort
 from flask_login import login_required, current_user
 from functools import wraps
 from datetime import date, datetime, timedelta
+from typing import Any, Callable
 from app import db
 from app.models.ticket import Ticket, TICKET_STATUSES
 from app.models.attendance import Attendance
@@ -10,9 +13,9 @@ from app.services.attendance_service import check_in, check_out
 engineer_bp = Blueprint('engineer', __name__)
 
 
-def engineer_required(f):
+def engineer_required(f: Callable[..., Any]) -> Callable[..., Any]:
     @wraps(f)
-    def decorated(*args, **kwargs):
+    def decorated(*args: Any, **kwargs: Any) -> Any:
         if not current_user.is_authenticated or not (current_user.is_engineer() or current_user.is_admin()):
             abort(403)
         return f(*args, **kwargs)
@@ -22,7 +25,7 @@ def engineer_required(f):
 @engineer_bp.route('/dashboard')
 @login_required
 @engineer_required
-def dashboard():
+def dashboard() -> str:
     today = date.today()
     my_open = Ticket.query.filter_by(
         assigned_to=current_user.id
@@ -64,7 +67,7 @@ def dashboard():
 @engineer_bp.route('/check-in', methods=['POST'])
 @login_required
 @engineer_required
-def do_check_in():
+def do_check_in() -> str:
     record, error = check_in(current_user.id)
     if error:
         flash(error, 'warning')
@@ -76,7 +79,7 @@ def do_check_in():
 @engineer_bp.route('/check-out', methods=['POST'])
 @login_required
 @engineer_required
-def do_check_out():
+def do_check_out() -> str:
     record, error = check_out(current_user.id)
     if error:
         flash(error, 'warning')
@@ -88,7 +91,7 @@ def do_check_out():
 @engineer_bp.route('/attendance')
 @login_required
 @engineer_required
-def attendance():
+def attendance() -> str:
     month = request.args.get('month', date.today().month, type=int)
     year = request.args.get('year', date.today().year, type=int)
     start = date(year, month, 1)
