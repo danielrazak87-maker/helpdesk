@@ -132,10 +132,15 @@ def create_ticket():
 
     from app.services.sla_service import assign_sla
     assign_sla(ticket)
-    from app.services.attendance_service import auto_assign_engineer
-    engineer = auto_assign_engineer()
-    if engineer:
-        ticket.assigned_to = engineer.id
+
+    # Use explicit assigned_to if provided, otherwise auto-assign
+    if 'assigned_to' in data:
+        ticket.assigned_to = data['assigned_to']
+    else:
+        from app.services.attendance_service import auto_assign_engineer
+        engineer = auto_assign_engineer()
+        if engineer:
+            ticket.assigned_to = engineer.id
     db.session.commit()
 
     return jsonify({
