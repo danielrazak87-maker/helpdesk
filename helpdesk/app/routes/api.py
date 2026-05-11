@@ -2,7 +2,7 @@ from __future__ import annotations
 from flask import Blueprint, request, jsonify, abort
 from flask_login import current_user, login_required
 from functools import wraps
-from app import db
+from app import db, csrf
 from app.models.ticket import Ticket, TicketComment, TICKET_STATUSES, TICKET_PRIORITIES
 from app.models.user import User
 from app.models.api_token import ApiToken
@@ -308,3 +308,163 @@ def revoke_token(token_id):
     token.is_active = False
     db.session.commit()
     return jsonify({'message': 'Token revoked successfully'})
+
+
+# ── Simple API (X-API-Key auth) ────────────────────────────────────────
+# Lightweight endpoint for external bot integrations (e.g., Morpheus).
+# No Bearer token needed — just X-API-Key header matching the .env API_KEY.
+
+simple_api_bp = Blueprint('simple_api', __name__, url_prefix='/api')
+
+# Accepted priority values and their canonical forms
+_PRIORITY_MAP = {
+    'low': 'low', 'medium': 'medium', 'normal': 'medium',
+    'high': 'high', 'critical': 'critical'
+}
+
+
+def _simple_api_key_required(f):
+    """Validate X-API-Key header against Config.API_KEY."""
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        from flask import current_app
+        expected_key = current_app.config.get('API_KEY')
+        if not expected_key:
+            return jsonify({'error': 'API key not configured on server'}), 500
+        provided_key = request.headers.get('X-API-Key', '')
+        if not provided_key or provided_key != expected_key:
+            return jsonify({'error': 'Invalid or missing X-API-Key header'}), 401
+        return f(*args, **kwargs)
+    return decorated
+
+
+@simple_api_bp.route('/tickets', methods=['POST'])
+@_simple_api_key_required
+def create_ticket_simple():
+    """Create a ticket via X-API-Key auth (for bots / external systems).
+
+    Accepts JSON body:
+        - title (required)
+        - description (required)
+        - priority (required): Low / Medium / Normal / High / Critical
+        - category (required)
+        - status (optional, default 'open')
+        - project (optional)
+        - assigned_to (optional, engineer user ID)
+
+    If status=in_progress, auto-logs attendance check-in for the engineer.
+    """
+    if not request.is_json:
+        return jsonify({'error': 'Request must be JSON'}), 400
+
+    data = request.get_json() or {}
+
+    # ── Validate required fields ──────────────────────────────────────
+    errors = []
+    for field in ['title', 'description', 'priority', 'category']:
+        if not data.get(field):
+            errors.append(f'Missing required field: {field}')
+    if errors:
+        return jsonify({'error': 'Validation failed', 'details': errors}), 400
+
+    # ── Normalise priority ────────────────────────────────────────────
+    raw_priority = data['priority'].strip().lower()
+    priority = _PRIORITY_MAP.get(raw_priority)
+    if not priority:
+        return jsonify({
+            'error': 'Invalid priority',
+            'valid': list(_PRIORITY_MAP.keys())
+        }), 400
+
+    # ── Default created_by to admin user (id=2) ───────────────────────
+    created_by = data.get('created_by', 2)
+    creator = User.query.get(created_by)
+    if not creator:
+        return jsonify({'error': f'created_by user {created_by} not found'}), 400
+
+    # ── Build ticket ──────────────────────────────────────────────────
+    status = data.get('status', 'open')
+    if status not in TICKET_STATUSES:
+        return jsonify({'error': 'Invalid status', 'valid': TICKET_STATUSES}), 400
+
+    ticket = Ticket(
+        ticket_number=Ticket.generate_ticket_number(),
+        title=data['title'].strip(),
+        description=data['description'].strip(),
+        priority=priority,
+        category=data['category'].strip(),
+        project=data.get('project', creator.project or ''),
+        created_by=created_by,
+        status=status
+    )
+
+    # Optional assigned_to
+    assigned_to = data.get('assigned_to')
+    if assigned_to:
+        engineer = User.query.get(assigned_to)
+        if not engineer:
+            return jsonify({'error': f'assigned_to user {assigned_to} not found'}), 400
+        ticket.assigned_to = assigned_to
+
+    db.session.add(ticket)
+    db.session.commit()
+
+    # ── SLA assignment ────────────────────────────────────────────────
+    from app.services.sla_service import assign_sla
+    assign_sla(ticket)
+    db.session.commit()
+
+    # ── Attendance: auto check-in if status=in_progress ───────────────
+    checkin_record = None
+    if status == 'in_progress':
+        engineer_id = ticket.assigned_to or created_by
+        from app.services.attendance_service import check_in
+        record, err = check_in(engineer_id)
+        if record:
+            checkin_record = {
+                'engineer_id': engineer_id,
+                'work_date': str(record.work_date),
+                'check_in': record.check_in.isoformat() if record.check_in else None
+            }
+
+    return jsonify({
+        'id': ticket.id,
+        'ticket_number': ticket.ticket_number,
+        'status': ticket.status,
+        'message': 'Ticket created successfully',
+        'checkin': checkin_record
+    }), 201
+
+
+@simple_api_bp.route('/tickets/<int:ticket_id>/comments', methods=['POST'])
+@_simple_api_key_required
+def add_comment_simple(ticket_id):
+    """Add a comment to a ticket via X-API-Key auth."""
+    if not request.is_json:
+        return jsonify({'error': 'Request must be JSON'}), 400
+    data = request.get_json() or {}
+    if 'content' not in data:
+        return jsonify({'error': 'Missing content field'}), 400
+
+    ticket = Ticket.query.get_or_404(ticket_id)
+
+    # Use user_id from request body, default to admin (id=2)
+    user_id = data.get('user_id', 2)
+    user = User.query.get(user_id)
+    if not user:
+        return jsonify({'error': f'user_id {user_id} not found'}), 400
+
+    comment = TicketComment(
+        ticket_id=ticket_id,
+        user_id=user.id,
+        content=data['content'],
+        is_internal=data.get('is_internal', False)
+    )
+    db.session.add(comment)
+
+    # Update SLA responded if engineer
+    if user.is_engineer() and not ticket.sla_responded_at:
+        ticket.sla_responded_at = datetime.utcnow()
+
+    db.session.commit()
+    return jsonify({'message': 'Comment added successfully', 'id': comment.id}), 201

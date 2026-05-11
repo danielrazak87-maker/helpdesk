@@ -25,6 +25,13 @@
       <option value="{{ p }}" {% if p == priority_filter %}selected{% endif %}>{{ p.title() }}</option>
       {% endfor %}
     </select>
+    <select name="sla_status" class="form-control form-control-sm" onchange="this.form.submit()">
+      <option value="">All SLA</option>
+      <option value="on_track" {% if sla_filter == 'on_track' %}selected{% endif %}>✅ On Track</option>
+      <option value="at_risk" {% if sla_filter == 'at_risk' %}selected{% endif %}>⚠️ At Risk</option>
+      <option value="breached" {% if sla_filter == 'breached' %}selected{% endif %}>🔴 Breached</option>
+      <option value="resolved" {% if sla_filter == 'resolved' %}selected{% endif %}>✓ Resolved</option>
+    </select>
     <a href="{{ url_for('tickets.my_tickets') }}" class="btn btn-ghost btn-sm">Clear</a>
   </form>
 </div>
@@ -57,7 +64,7 @@
           <td>
             {% set sla = t.sla_status() %}
             <span class="sla-dot sla-{{ sla }}" title="{{ sla.replace('_',' ').title() }}">
-              {% if sla == 'on_track' %}✅{% elif sla == 'warning' %}⚠️{% elif sla == 'breached' %}🔴{% else %}✓{% endif %}
+              {% if sla == 'on_track' %}✅{% elif sla == 'at_risk' %}⚠️{% elif sla == 'breached' %}🔴{% else %}✓{% endif %}
               {{ t.sla_percent() }}%
             </span>
           </td>
@@ -92,11 +99,11 @@
   {% if tickets.pages > 1 %}
   <div class="pagination">
     {% if tickets.has_prev %}
-    <a href="{{ url_for('tickets.my_tickets', page=tickets.prev_num, status=status_filter, priority=priority_filter) }}" class="btn btn-ghost btn-sm">← Prev</a>
+    <a href="{{ url_for('tickets.my_tickets', page=tickets.prev_num, status=status_filter, priority=priority_filter, sla_status=sla_filter) }}" class="btn btn-ghost btn-sm">← Prev</a>
     {% endif %}
     <span class="page-info">Page {{ tickets.page }} of {{ tickets.pages }}</span>
     {% if tickets.has_next %}
-    <a href="{{ url_for('tickets.my_tickets', page=tickets.next_num, status=status_filter, priority=priority_filter) }}" class="btn btn-ghost btn-sm">Next →</a>
+    <a href="{{ url_for('tickets.my_tickets', page=tickets.next_num, status=status_filter, priority=priority_filter, sla_status=sla_filter) }}" class="btn btn-ghost btn-sm">Next →</a>
     {% endif %}
   </div>
   {% endif %}

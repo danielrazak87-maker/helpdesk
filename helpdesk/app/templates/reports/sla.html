@@ -1,0 +1,145 @@
+{% extends "base.html" %}
+{% block title %}SLA Report — Kayfalah Helpdesk{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title">SLA Performance Report</h1>
+</div>
+
+<!-- Client SLA Performance -->
+<div class="card">
+  <div class="card-header">SLA Performance by Client</div>
+  <div class="table-wrap">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Client</th>
+          <th>SLA Policy</th>
+          <th>Total</th>
+          <th>Resolved</th>
+          <th>Breached</th>
+          <th>Compliance</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in client_perf %}
+        <tr>
+          <td><strong>{{ row.client.name }}</strong></td>
+          <td>
+            {% if row.sla_active %}
+              {% if row.response_hours %}{{ row.response_hours }}h resp{% endif %}
+              {% if row.resolution_hours %}{% if row.response_hours %} / {% endif %}{{ row.resolution_hours }}h res{% endif %}
+            {% else %}
+              <span class="badge badge-ghost">Global</span>
+            {% endif %}
+          </td>
+          <td>{{ row.total }}</td>
+          <td>{{ row.resolved }}</td>
+          <td>{{ row.breached }}</td>
+          <td>
+            <span class="badge {% if row.compliance >= 90 %}badge-success{% elif row.compliance >= 70 %}badge-warning{% else %}badge-danger{% endif %}">
+              {{ row.compliance }}%
+            </span>
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="6"><div class="empty-state">
+          <div class="empty-icon" style="font-size:2rem;">📊</div>
+          <div>No client SLA data available yet.</div>
+        </div></td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Monthly SLA Trend -->
+<div class="card" style="margin-top:1.5rem;">
+  <div class="card-header">Monthly SLA Compliance Trend</div>
+  <div class="card-body">
+    {% if monthly_trend %}
+    <canvas id="slaTrendChart" height="250"></canvas>
+    {% else %}
+    <div class="empty-state"><div>No monthly trend data yet.</div></div>
+    {% endif %}
+  </div>
+</div>
+
+<!-- Monthly Detail Table -->
+{% if monthly_trend %}
+<div class="card" style="margin-top:1.5rem;">
+  <div class="card-header">Monthly Breakdown</div>
+  <div class="table-wrap">
+    <table class="table">
+      <thead><tr><th>Month</th><th>Total Tickets</th><th>Breached</th><th>Compliance</th></tr></thead>
+      <tbody>
+        {% for m in monthly_trend %}
+        <tr>
+          <td><strong>{{ m.month }}</strong></td>
+          <td>{{ m.total }}</td>
+          <td>{{ m.breached }}</td>
+          <td>
+            <span class="badge {% if m.compliance >= 90 %}badge-success{% elif m.compliance >= 70 %}badge-warning{% else %}badge-danger{% endif %}">
+              {{ m.compliance }}%
+            </span>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+{% endblock %}
+{% block scripts %}
+{% if monthly_trend %}
+<script>
+const trendData = {{ monthly_trend | tojson }};
+if (typeof Chart !== 'undefined') {
+  new Chart(document.getElementById('slaTrendChart'), {
+    type: 'line',
+    data: {
+      labels: trendData.map(d => d.month),
+      datasets: [{
+        label: 'SLA Compliance %',
+        data: trendData.map(d => d.compliance),
+        borderColor: '#6366f1',
+        backgroundColor: 'rgba(99,102,241,0.1)',
+        fill: true,
+        tension: 0.3,
+        pointBackgroundColor: '#6366f1',
+        pointRadius: 5
+      }, {
+        label: 'Breached',
+        data: trendData.map(d => d.breached),
+        borderColor: '#ef4444',
+        backgroundColor: 'rgba(239,68,68,0.1)',
+        fill: true,
+        tension: 0.3,
+        pointBackgroundColor: '#ef4444',
+        pointRadius: 5,
+        yAxisID: 'y1'
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: { labels: { color: '#a0aec0' } }
+      },
+      scales: {
+        y: {
+          min: 0, max: 100,
+          ticks: { color: '#a0aec0', callback: v => v + '%' }
+        },
+        y1: {
+          position: 'right',
+          ticks: { color: '#a0aec0' },
+          grid: { display: false }
+        },
+        x: { ticks: { color: '#a0aec0' } }
+      }
+    }
+  });
+}
+</script>
+{% endif %}
+{% endblock %}

@@ -6,6 +6,7 @@ from functools import wraps
 from typing import Any, Callable
 from app import db
 from app.models.user import User
+from app.models.client import Client
 from app.models.ticket import Ticket, TICKET_PRIORITIES, TICKET_STATUSES
 from app.models.sla import SLAPolicy
 from app.models.escalation import EscalationRule, EscalationLog
@@ -70,6 +71,21 @@ def dashboard() -> str:
         ).filter(Ticket.status.notin_(['resolved', 'closed'])).count()
         engineer_workload.append({'engineer': eng, 'open': open_count})
 
+    # SLA compliance
+    from app.services.sla_service import get_sla_dashboard_stats
+    sla_stats = get_sla_dashboard_stats()
+
+    # At-risk and breached tickets for quick view
+    at_risk_tickets = Ticket.query.filter(
+        Ticket.sla_state == 'at_risk',
+        Ticket.status.notin_(['resolved', 'closed'])
+    ).order_by(Ticket.sla_resolution_due.asc()).limit(5).all()
+
+    breached_tickets = Ticket.query.filter(
+        Ticket.sla_state == 'breached',
+        Ticket.status.notin_(['resolved', 'closed'])
+    ).order_by(Ticket.sla_resolution_due.asc()).limit(5).all()
+
     return render_template('admin/dashboard.html',
                            total_tickets=total_tickets,
                            open_tickets=open_tickets,
@@ -83,7 +99,10 @@ def dashboard() -> str:
                            status_stats=dict(status_stats),
                            by_status=dict(status_stats),
                            recent_tickets=recent_tickets,
-                           engineer_workload=engineer_workload)
+                           engineer_workload=engineer_workload,
+                           sla_stats=sla_stats,
+                           at_risk_tickets=at_risk_tickets,
+                           breached_tickets=breached_tickets)
 
 
 # ─── User Management ──────────────────────────────────────────────────────────
@@ -104,6 +123,7 @@ def users() -> str:
 @login_required
 @admin_required
 def create_user() -> str:
+    clients = Client.query.order_by(Client.name).all()
     if request.method == 'POST':
         email = request.form.get('email', '').strip().lower()
         full_name = request.form.get('full_name', '').strip()
@@ -111,10 +131,11 @@ def create_user() -> str:
         department = request.form.get('department', '')
         phone = request.form.get('phone', '')
         password = request.form.get('password', '')
+        client_id = request.form.get('client_id', '')
 
         if User.query.filter_by(email=email).first():
             flash('Email already registered.', 'danger')
-            return render_template('admin/user_form.html', action='Create')
+            return render_template('admin/user_form.html', action='Create', clients=clients)
 
         user = User(
             email=email,
@@ -122,6 +143,7 @@ def create_user() -> str:
             role=role,
             department=department,
             phone=phone,
+            client_id=int(client_id) if client_id else None,
             is_active=True
         )
         user.set_password(password)
@@ -130,7 +152,7 @@ def create_user() -> str:
         flash(f'User {full_name} created successfully.', 'success')
         return redirect(url_for('admin.users'))
 
-    return render_template('admin/user_form.html', action='Create', user=None)
+    return render_template('admin/user_form.html', action='Create', user=None, clients=clients)
 
 
 @admin_bp.route('/users/<int:user_id>/edit', methods=['GET', 'POST'])
@@ -138,19 +160,22 @@ def create_user() -> str:
 @admin_required
 def edit_user(user_id: int) -> str:
     user = User.query.get_or_404(user_id)
+    clients = Client.query.order_by(Client.name).all()
     if request.method == 'POST':
         user.full_name = request.form.get('full_name', user.full_name)
         user.role = request.form.get('role', user.role)
         user.department = request.form.get('department', user.department)
         user.phone = request.form.get('phone', user.phone)
         user.is_active = request.form.get('is_active') == 'on'
+        client_id = request.form.get('client_id', '')
+        user.client_id = int(client_id) if client_id else None
         new_pass = request.form.get('password', '')
         if new_pass:
             user.set_password(new_pass)
         db.session.commit()
         flash('User updated.', 'success')
         return redirect(url_for('admin.users'))
-    return render_template('admin/user_form.html', action='Edit', user=user)
+    return render_template('admin/user_form.html', action='Edit', user=user, clients=clients)
 
 
 @admin_bp.route('/users/<int:user_id>/toggle', methods=['POST'])
@@ -259,18 +284,24 @@ def all_tickets() -> str:
     page = request.args.get('page', 1, type=int)
     status = request.args.get('status', '')
     priority = request.args.get('priority', '')
+    sla_filter = request.args.get('sla_status', '')
     query = Ticket.query
     if status:
         query = query.filter_by(status=status)
     if priority:
         query = query.filter_by(priority=priority)
+    if sla_filter:
+        query = query.filter_by(sla_state=sla_filter)
     tickets = query.order_by(Ticket.created_at.desc()).paginate(page=page, per_page=20)
+    engineers = User.query.filter_by(role='engineer', is_active=True).all()
     return render_template('admin/tickets.html',
                            tickets=tickets,
                            statuses=TICKET_STATUSES,
                            priorities=TICKET_PRIORITIES,
                            status_filter=status,
-                           priority_filter=priority)
+                           priority_filter=priority,
+                           sla_filter=sla_filter,
+                           engineers=engineers)
 
 
 # ─── Attendance (Admin) ────────────────────────────────────────────────────
@@ -386,3 +417,90 @@ def bulk_assign_tickets():
     db.session.commit()
     flash(f'{count} ticket(s) assigned to {engineer.full_name}.', 'success')
     return redirect(url_for('admin.all_tickets'))
+
+
+# ─── Client Management ─────────────────────────────────────────────────────────
+
+@admin_bp.route('/clients')
+@login_required
+@admin_required
+def clients() -> str:
+    from app.models.client import Client
+    clients_list = Client.query.order_by(Client.name).all()
+    return render_template('admin/clients.html', clients=clients_list)
+
+
+@admin_bp.route('/clients/create', methods=['GET', 'POST'])
+@login_required
+@admin_required
+def create_client() -> str:
+    from app.models.client import Client
+    if request.method == 'POST':
+        name = request.form.get('name', '').strip()
+        description = request.form.get('description', '').strip()
+        if not name:
+            flash('Client name is required.', 'danger')
+            return render_template('admin/client_form.html', action='Create', client=None)
+        if Client.query.filter_by(name=name).first():
+            flash('A client with that name already exists.', 'danger')
+            return render_template('admin/client_form.html', action='Create', client=None)
+        client = Client(
+            name=name,
+            description=description,
+            response_time_hours=float(request.form.get('response_time_hours')) if request.form.get('response_time_hours') else None,
+            resolution_time_hours=float(request.form.get('resolution_time_hours')) if request.form.get('resolution_time_hours') else None,
+            sla1_time_hours=float(request.form.get('sla1_time_hours')) if request.form.get('sla1_time_hours') else None,
+            sla2_time_hours=float(request.form.get('sla2_time_hours')) if request.form.get('sla2_time_hours') else None,
+            sla3_time_hours=float(request.form.get('sla3_time_hours')) if request.form.get('sla3_time_hours') else None,
+            business_hours_only=request.form.get('business_hours_only') == 'on',
+            active_sla=request.form.get('active_sla') == 'on'
+        )
+        db.session.add(client)
+        db.session.commit()
+        flash(f'Client "{name}" created.', 'success')
+        return redirect(url_for('admin.clients'))
+    return render_template('admin/client_form.html', action='Create', client=None)
+
+
+@admin_bp.route('/clients/<int:client_id>/edit', methods=['GET', 'POST'])
+@login_required
+@admin_required
+def edit_client(client_id: int) -> str:
+    from app.models.client import Client
+    client = Client.query.get_or_404(client_id)
+    if request.method == 'POST':
+        name = request.form.get('name', '').strip()
+        if not name:
+            flash('Client name is required.', 'danger')
+            return render_template('admin/client_form.html', action='Edit', client=client)
+        existing = Client.query.filter_by(name=name).first()
+        if existing and existing.id != client.id:
+            flash('A client with that name already exists.', 'danger')
+            return render_template('admin/client_form.html', action='Edit', client=client)
+        client.name = name
+        client.description = request.form.get('description', '').strip()
+        client.response_time_hours = float(request.form.get('response_time_hours')) if request.form.get('response_time_hours') else None
+        client.resolution_time_hours = float(request.form.get('resolution_time_hours')) if request.form.get('resolution_time_hours') else None
+        client.sla1_time_hours = float(request.form.get('sla1_time_hours')) if request.form.get('sla1_time_hours') else None
+        client.sla2_time_hours = float(request.form.get('sla2_time_hours')) if request.form.get('sla2_time_hours') else None
+        client.sla3_time_hours = float(request.form.get('sla3_time_hours')) if request.form.get('sla3_time_hours') else None
+        client.business_hours_only = request.form.get('business_hours_only') == 'on'
+        client.active_sla = request.form.get('active_sla') == 'on'
+        db.session.commit()
+        flash('Client updated.', 'success')
+        return redirect(url_for('admin.clients'))
+    return render_template('admin/client_form.html', action='Edit', client=client)
+
+
+@admin_bp.route('/clients/<int:client_id>/delete', methods=['POST'])
+@login_required
+@admin_required
+def delete_client(client_id: int) -> str:
+    from app.models.client import Client
+    client_obj = Client.query.get_or_404(client_id)
+    for user in client_obj.users:
+        user.client_id = None
+    db.session.delete(client_obj)
+    db.session.commit()
+    flash(f'Client "{client_obj.name}" deleted.', 'info')
+    return redirect(url_for('admin.clients'))

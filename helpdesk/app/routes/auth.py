@@ -16,6 +16,7 @@ from app import db, limiter
 def _utcnow() -> datetime:
     return datetime.now(timezone.utc).replace(tzinfo=None)
 from app.models.user import User
+from app.models.client import Client
 from app.services.notification import send_email, send_password_reset_email
 
 auth_bp = Blueprint('auth', __name__)
@@ -132,34 +133,38 @@ def register():
     if current_user.is_authenticated:
         return redirect(url_for('main.dashboard'))
 
+    clients = Client.query.order_by(Client.name).all()
+
     if request.method == 'POST':
         email = request.form.get('email', '').strip().lower()
         password = request.form.get('password', '')
         full_name = request.form.get('full_name', '')
         project = request.form.get('project', '')
+        client_id = request.form.get('client_id', '')
 
         if not email or not password or not full_name or not project:
             flash('All fields are required.', 'danger')
-            return render_template('auth/register.html')
+            return render_template('auth/register.html', clients=clients)
 
         if not validate_email(email):
             flash('Please enter a valid email address.', 'danger')
-            return render_template('auth/register.html')
+            return render_template('auth/register.html', clients=clients)
 
         error = validate_password_strength(password)
         if error:
             flash(error, 'danger')
-            return render_template('auth/register.html')
+            return render_template('auth/register.html', clients=clients)
 
         existing = User.query.filter_by(email=email).first()
         if existing:
             flash('Email already registered.', 'warning')
-            return render_template('auth/register.html')
+            return render_template('auth/register.html', clients=clients)
 
         user = User(
             email=email,
             full_name=full_name,
             project=project,
+            client_id=int(client_id) if client_id else None,
             role='user'
         )
         user.set_password(password)
@@ -170,7 +175,7 @@ def register():
         flash('Registration successful!', 'success')
         return redirect(url_for('main.dashboard'))
 
-    return render_template('auth/register.html')
+    return render_template('auth/register.html', clients=clients)
 
 
 # ─── Password Reset ───────────────────────────────────────────────────────────

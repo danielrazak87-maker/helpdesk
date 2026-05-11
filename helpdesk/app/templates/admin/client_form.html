@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+{% block title %}{{ action }} Client — Kayfalah Helpdesk{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div>
+    <a href="{{ url_for('admin.clients') }}" class="back-link">← Back to Clients</a>
+    <h1 class="page-title">{{ action }} Client</h1>
+  </div>
+</div>
+<div class="card" style="max-width:700px">
+  <div class="card-body">
+    <form method="POST">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+      <div class="form-group">
+        <label>Name <span class="required">*</span></label>
+        <input name="name" class="form-control" value="{{ client.name if client else '' }}" required autofocus/>
+      </div>
+      <div class="form-group">
+        <label>Description</label>
+        <textarea name="description" class="form-control" rows="3">{{ client.description if client else '' }}</textarea>
+      </div>
+
+      <!-- SLA Policy Section -->
+      <hr style="margin: 1.5rem 0; border-color: var(--border-color);"/>
+      <h3 style="margin-bottom: 1rem; font-size: 1.1rem;">⏱️ SLA Policy (Optional)</h3>
+      <p class="text-muted text-sm" style="margin-bottom: 1rem;">Set per-client SLA targets. Leave empty to use global priority-based SLA instead.</p>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+        <div class="form-group">
+          <label>Response Time (hours)</label>
+          <input type="number" name="response_time_hours" class="form-control"
+                 value="{{ client.response_time_hours if client and client.response_time_hours else '' }}"
+                 step="0.5" min="0" placeholder="e.g. 4"/>
+          <span class="text-muted text-sm">Target time to first response</span>
+        </div>
+        <div class="form-group">
+          <label>Resolution Time (hours)</label>
+          <input type="number" name="resolution_time_hours" class="form-control"
+                 value="{{ client.resolution_time_hours if client and client.resolution_time_hours else '' }}"
+                 step="0.5" min="0" placeholder="e.g. 24"/>
+          <span class="text-muted text-sm">Target time to full resolution</span>
+        </div>
+      </div>
+
+      <!-- SLA Tiers (SLA 1 / SLA 2 / SLA 3) -->
+      <h4 style="margin-top: 1.25rem; margin-bottom: 0.75rem; font-size: 0.95rem; color: var(--text-secondary);">SLA Tier Timings (Optional)</h4>
+      <p class="text-muted text-sm" style="margin-bottom: 1rem;">Define up to three SLA tier thresholds. These are separate from the global Response/Resolution targets above.</p>
+      <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem;">
+        <div class="form-group">
+          <label>SLA 1 Timing (hours)</label>
+          <input type="number" name="sla1_time_hours" class="form-control"
+                 value="{{ client.sla1_time_hours if client and client.sla1_time_hours else '' }}"
+                 step="0.5" min="0" placeholder="e.g. 1"/>
+          <span class="text-muted text-sm">Highest priority tier</span>
+        </div>
+        <div class="form-group">
+          <label>SLA 2 Timing (hours)</label>
+          <input type="number" name="sla2_time_hours" class="form-control"
+                 value="{{ client.sla2_time_hours if client and client.sla2_time_hours else '' }}"
+                 step="0.5" min="0" placeholder="e.g. 4"/>
+          <span class="text-muted text-sm">Medium priority tier</span>
+        </div>
+        <div class="form-group">
+          <label>SLA 3 Timing (hours)</label>
+          <input type="number" name="sla3_time_hours" class="form-control"
+                 value="{{ client.sla3_time_hours if client and client.sla3_time_hours else '' }}"
+                 step="0.5" min="0" placeholder="e.g. 8"/>
+          <span class="text-muted text-sm">Standard priority tier</span>
+        </div>
+      </div>
+
+      <div style="display: flex; gap: 2rem; margin-top: 0.5rem;">
+        <label class="checkbox-label">
+          <input type="checkbox" name="business_hours_only"
+                 {% if client and client.business_hours_only %}checked{% endif %}/>
+          Business hours only (9am–6pm Mon–Fri)
+        </label>
+        <label class="checkbox-label">
+          <input type="checkbox" name="active_sla"
+                 {% if not client or client.active_sla %}checked{% endif %}/>
+          SLA active for this client
+        </label>
+      </div>
+
+      <div class="form-actions">
+        <a href="{{ url_for('admin.clients') }}" class="btn btn-ghost">Cancel</a>
+        <button type="submit" class="btn btn-primary">{{ action }} Client</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

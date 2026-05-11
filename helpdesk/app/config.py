@@ -78,6 +78,9 @@ class Config:
     if FLASK_ENV not in ('development', 'production', 'testing'):
         print(f"WARNING: FLASK_ENV='{FLASK_ENV}' is unusual. Expected 'development', 'production', or 'testing'.", file=sys.stderr)
 
+    # ─── API Key ───────────────────────────────────────────────────────────
+    API_KEY: str | None = os.environ.get('API_KEY') or None
+
     # ─── Rate limiting ──────────────────────────────────────────────────────
     RATELIMIT_ENABLED: bool = os.environ.get('RATELIMIT_ENABLED', 'True').lower() in ('true', '1', 'yes')
     RATELIMIT_DEFAULT: str = os.environ.get('RATELIMIT_DEFAULT', '100/minute')

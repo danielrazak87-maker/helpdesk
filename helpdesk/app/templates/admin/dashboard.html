@@ -33,6 +33,11 @@
     <div class="kpi-value">{{ breached }}</div>
     <div class="kpi-label">SLA Breached</div>
   </div>
+  <div class="kpi-card kpi-sla">
+    <div class="kpi-icon">⏱️</div>
+    <div class="kpi-value">{{ sla_stats.compliance }}%</div>
+    <div class="kpi-label">SLA Compliance</div>
+  </div>
   <div class="kpi-card kpi-purple">
     <div class="kpi-icon">👥</div>
     <div class="kpi-value">{{ total_users }}</div>
@@ -79,7 +84,7 @@
           <td>{{ t.title[:45] }}{% if t.title|length > 45 %}...{% endif %}</td>
           <td><span class="badge badge-priority-{{ t.priority }}">{{ t.priority.title() }}</span></td>
           <td><span class="badge badge-status-{{ t.status }}">{{ t.status.replace('_',' ').title() }}</span></td>
-          <td><span class="sla-dot sla-{{ t.sla_status() }}">{% if t.sla_status()=='breached' %}🔴{% elif t.sla_status()=='warning' %}⚠️{% elif t.sla_status()=='resolved' %}✓{% else %}✅{% endif %}</span></td>
+          <td><span class="sla-dot sla-{{ t.sla_status() }}">{% if t.sla_status()=='breached' %}🔴{% elif t.sla_status()=='at_risk' %}⚠️{% elif t.sla_status()=='resolved' %}✓{% else %}✅{% endif %}</span></td>
           <td>{{ t.assignee.full_name if t.assignee else '—' }}</td>
           <td class="text-muted text-sm">{{ t.created_at.strftime('%d %b %H:%M') }}</td>
         </tr>
@@ -119,6 +124,51 @@
         {% endfor %}
       </tbody>
     </table>
+  </div>
+</div>
+
+<!-- SLA Alerts: At-Risk & Breached -->
+<div style="display:grid; grid-template-columns:1fr 1fr; gap:1.5rem; margin-top:1.5rem;">
+  <div class="card sla-alert-card sla-alert-risk">
+    <div class="card-header">⚠️ At Risk ({{ sla_stats.at_risk }})</div>
+    <div class="table-wrap">
+      <table class="table">
+        <thead><tr><th>Ticket</th><th>Title</th><th>Due</th></tr></thead>
+        <tbody>
+          {% for t in at_risk_tickets %}
+          <tr>
+            <td><a href="{{ url_for('tickets.detail', ticket_id=t.id) }}" class="ticket-link">{{ t.ticket_number }}</a></td>
+            <td>{{ t.title[:35] }}{% if t.title|length > 35 %}...{% endif %}</td>
+            <td class="text-sm">{{ t.sla_resolution_due.strftime('%d %b %H:%M') if t.sla_resolution_due else '—' }}</td>
+          </tr>
+          {% else %}
+          <tr><td colspan="3" class="text-muted text-sm">No tickets at risk ✓</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  <div class="card sla-alert-card sla-alert-breached">
+    <div class="card-header">🔴 Breached ({{ sla_stats.breached }})</div>
+    <div class="table-wrap">
+      <table class="table">
+        <thead><tr><th>Ticket</th><th>Title</th><th>Overdue</th></tr></thead>
+        <tbody>
+          {% for t in breached_tickets %}
+          <tr>
+            <td><a href="{{ url_for('tickets.detail', ticket_id=t.id) }}" class="ticket-link">{{ t.ticket_number }}</a></td>
+            <td>{{ t.title[:35] }}{% if t.title|length > 35 %}...{% endif %}</td>
+            <td class="text-sm text-danger">
+              {% set rem = t.sla_remaining_mins() %}
+              {% if rem is not none and rem < 0 %}{{ (-rem)//60 }}h {{ (-rem)%60 }}m{% else %}—{% endif %}
+            </td>
+          </tr>
+          {% else %}
+          <tr><td colspan="3" class="text-muted text-sm">No breached tickets ✓</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
   </div>
 </div>
 {% endblock %}

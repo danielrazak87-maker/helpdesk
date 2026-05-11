@@ -194,6 +194,12 @@ textarea.form-control { resize: vertical; }
 .kpi-yellow { border-top: 3px solid #f59e0b; } .kpi-yellow .kpi-value { color: #fcd34d; }
 .kpi-purple { border-top: 3px solid #8b5cf6; } .kpi-purple .kpi-value { color: #c4b5fd; }
 .kpi-teal { border-top: 3px solid #06b6d4; } .kpi-teal .kpi-value { color: #67e8f9; }
+.kpi-sla { border-top: 3px solid #8b5cf6; } .kpi-sla .kpi-value { color: #c4b5fd; }
+
+/* SLA Alert Cards */
+.sla-alert-card { border-radius: var(--radius); }
+.sla-alert-risk { border-left: 3px solid var(--warning); }
+.sla-alert-breached { border-left: 3px solid var(--danger); }
 
 /* Charts */
 .charts-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem; margin-bottom: 1.5rem; }
@@ -213,11 +219,11 @@ textarea.form-control { resize: vertical; }
 .sla-bar-wrap { background: rgba(255,255,255,.08); border-radius: 20px; height: 8px; margin: .5rem 0; overflow: hidden; }
 .sla-bar { height: 100%; border-radius: 20px; background: linear-gradient(90deg, var(--success), var(--warning)); transition: width .5s; }
 .sla-card-breached .sla-bar { background: var(--danger); }
-.sla-card-warning .sla-bar { background: var(--warning); }
+.sla-card-at_risk .sla-bar, .sla-card-warning .sla-bar { background: var(--warning); }
 .sla-info { display: flex; justify-content: space-between; font-size: .75rem; color: var(--muted); }
 .sla-status-label { font-size: 1rem; font-weight: 600; margin-bottom: .25rem; }
 .sla-card-on_track { border-left: 3px solid var(--success); }
-.sla-card-warning { border-left: 3px solid var(--warning); }
+.sla-card-at_risk, .sla-card-warning { border-left: 3px solid var(--warning); }
 .sla-card-breached { border-left: 3px solid var(--danger); }
 .sla-card-resolved { border-left: 3px solid var(--muted); }
 .sla-dot { font-size: .8rem; }

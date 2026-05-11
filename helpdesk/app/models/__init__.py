@@ -1,4 +1,5 @@
 from app.models.user import User
+from app.models.client import Client
 from app.models.ticket import Ticket, TicketComment, TicketHistory
 from app.models.sla import SLAPolicy
 from app.models.escalation import EscalationRule, EscalationLog

@@ -84,7 +84,7 @@ def create_app() -> Flask:
     from app.routes.main import main_bp
     # Phase 5 imports
     from app.routes.knowledge_base import kb_bp
-    from app.routes.api import api_bp
+    from app.routes.api import api_bp, simple_api_bp
     from app.routes.time_tracking import time_bp
     from app.routes.custom_fields import cf_bp
 
@@ -97,6 +97,9 @@ def create_app() -> Flask:
     # Phase 5 registrations
     app.register_blueprint(kb_bp)
     app.register_blueprint(api_bp)
+    csrf.exempt(api_bp)
+    app.register_blueprint(simple_api_bp)
+    csrf.exempt(simple_api_bp)  # API-key auth, no CSRF needed
     app.register_blueprint(time_bp)
     app.register_blueprint(cf_bp)
 

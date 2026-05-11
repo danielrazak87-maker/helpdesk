@@ -9,9 +9,12 @@ def start_scheduler(app):
     def sla_job():
         with app.app_context():
             from app.models.ticket import Ticket
-            from app.services.sla_service import check_and_update_sla
+            from app.services.sla_service import check_and_update_sla, update_all_sla_statuses
             from app.services.escalation_service import run_escalation_checks
             from app.services.notification import send_notification
+
+            # Update all SLA statuses for active tickets
+            update_all_sla_statuses()
 
             open_tickets = Ticket.query.filter(
                 Ticket.status.notin_(['resolved', 'closed'])

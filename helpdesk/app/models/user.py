@@ -18,6 +18,7 @@ class User(UserMixin, db.Model):
     full_name: str = db.Column(db.String(150), nullable=False)
     role: str = db.Column(db.String(20), nullable=False, default='user')  # admin, engineer, user
     department: Optional[str] = db.Column(db.String(100))
+    client_id: Optional[int] = db.Column(db.Integer, db.ForeignKey('clients.id'), nullable=True)
     project: Optional[str] = db.Column(db.String(100))
     phone: Optional[str] = db.Column(db.String(30))
     avatar: Optional[str] = db.Column(db.String(200))
@@ -25,6 +26,7 @@ class User(UserMixin, db.Model):
     created_at: Optional[datetime] = db.Column(db.DateTime, default=utcnow)
     last_login: Optional[datetime] = db.Column(db.DateTime)
     password_updated_at: Optional[datetime] = db.Column(db.DateTime)
+
     # 2FA fields
     totp_secret: Optional[str] = db.Column(db.String(32))
     is_2fa_enabled: bool = db.Column(db.Boolean, default=False)
@@ -67,19 +69,20 @@ class User(UserMixin, db.Model):
         self.totp_secret = pyotp.random_base32()
         return self.totp_secret
 
-    def get_totp_uri(self) -> str:
+    def get_otp_uri(self) -> str:
         """Return the otpauth URI for QR code generation."""
         if not self.totp_secret:
-            return ''
+            self.totp_secret = pyotp.random_base32()
         return pyotp.totp.TOTP(self.totp_secret).provisioning_uri(
-            name=self.email, issuer_name='Kayfalah Helpdesk'
+            name=self.email,
+            issuer_name='Kayfalah Helpdesk'
         )
 
     def verify_totp(self, code: str) -> bool:
         """Verify a TOTP code against the stored secret."""
         if not self.totp_secret:
             return False
-        return pyotp.TOTP(self.totp_secret).verify(code.strip())
+        return pyotp.totp.TOTP(self.totp_secret).verify(code.strip())
 
     def generate_backup_codes(self, count: int = 8) -> list:
         """Generate and store hashed backup codes. Returns plaintext codes (shown once)."""
@@ -103,9 +106,9 @@ class User(UserMixin, db.Model):
             return False
         for i, hashed in enumerate(codes):
             if check_password_hash(hashed, code.strip()):
-                # Remove used code
                 codes.pop(i)
                 self.backup_codes = json.dumps(codes)
+                db.session.commit()
                 return True
         return False
 

@@ -33,6 +33,7 @@ def my_tickets() -> str:
     page = request.args.get('page', 1, type=int)
     status_filter = request.args.get('status', '')
     priority_filter = request.args.get('priority', '')
+    sla_filter = request.args.get('sla_status', '')
 
     if current_user.is_admin():
         query = Ticket.query
@@ -45,6 +46,8 @@ def my_tickets() -> str:
         query = query.filter_by(status=status_filter)
     if priority_filter:
         query = query.filter_by(priority=priority_filter)
+    if sla_filter:
+        query = query.filter_by(sla_state=sla_filter)
 
     tickets = query.order_by(Ticket.created_at.desc()).paginate(page=page, per_page=15)
     return render_template('tickets/list.html',
@@ -52,7 +55,8 @@ def my_tickets() -> str:
                            statuses=TICKET_STATUSES,
                            priorities=TICKET_PRIORITIES,
                            status_filter=status_filter,
-                           priority_filter=priority_filter)
+                           priority_filter=priority_filter,
+                           sla_filter=sla_filter)
 
 
 @tickets_bp.route('/create', methods=['GET', 'POST'])

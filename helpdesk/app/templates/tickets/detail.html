@@ -103,7 +103,13 @@
     <div class="card sla-card sla-card-{{ ticket.sla_status() }}">
       <div class="card-header">⏱️ SLA Status</div>
       <div class="card-body">
-        <div class="sla-status-label">{{ ticket.sla_status().replace('_',' ').title() }}</div>
+        <div class="sla-status-label">
+          {% set s = ticket.sla_status() %}
+          {% if s == 'on_track' %}✅ On Track
+          {% elif s == 'at_risk' %}⚠️ At Risk
+          {% elif s == 'breached' %}🔴 Breached
+          {% else %}✓ {{ s.replace('_',' ').title() }}{% endif %}
+        </div>
         <div class="sla-bar-wrap">
           <div class="sla-bar" style="width:{{ ticket.sla_percent() }}%"></div>
         </div>

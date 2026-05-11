@@ -30,6 +30,7 @@ class Ticket(db.Model):
     sla_resolution_due = db.Column(db.DateTime)
     sla_breached = db.Column(db.Boolean, default=False)
     sla_responded_at = db.Column(db.DateTime)
+    sla_state = db.Column(db.String(20), default='on_track')  # on_track, at_risk, breached, resolved
 
     attachment = db.Column(db.String(300))
     rating = db.Column(db.Integer)  # 1-5 from user feedback
@@ -50,19 +51,12 @@ class Ticket(db.Model):
         return f'HD-{date_str}-{suffix}'
 
     def sla_status(self):
-        """Returns: on_track, warning, breached, resolved"""
+        """Returns: on_track, at_risk, breached, resolved — from persisted field."""
         if self.status in ['resolved', 'closed']:
             return 'resolved'
         if self.sla_breached:
             return 'breached'
-        if not self.sla_resolution_due:
-            return 'on_track'
-        now = utcnow()
-        total = (self.sla_resolution_due - self.created_at).total_seconds()
-        elapsed = (now - self.created_at).total_seconds()
-        if total > 0 and elapsed / total >= 0.75:
-            return 'warning'
-        return 'on_track'
+        return self.sla_state or 'on_track'
 
     def sla_percent(self):
         if not self.sla_resolution_due:

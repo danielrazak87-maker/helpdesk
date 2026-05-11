@@ -69,7 +69,7 @@ def notify_ticket_created(ticket, creator) -> None:
     )
     send_email(
         subject=f'[KF Helpdesk] Ticket {ticket.ticket_number} Created',
-        recipients=[creator.email],
+        recipients=[creator.email, 'info@kayfalah.com'],
         body_text=text_body,
         body_html=html_body
     )

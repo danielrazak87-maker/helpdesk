@@ -36,6 +36,15 @@
         </div>
       </div>
       <div class="form-group">
+        <label>Client</label>
+        <select name="client_id" class="form-control">
+          <option value="">— No Client —</option>
+          {% for c in clients %}
+          <option value="{{ c.id }}" {% if user and user.client_id == c.id %}selected{% endif %}>{{ c.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-group">
         <label>Phone</label>
         <input name="phone" class="form-control" value="{{ user.phone if user else '' }}"/>
       </div>

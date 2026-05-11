@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block title %}Clients — Kayfalah Helpdesk{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title">Client Management</h1>
+  <a href="{{ url_for('admin.create_client') }}" class="btn btn-primary">+ Add Client</a>
+</div>
+<div class="card">
+  <div class="table-wrap">
+    <table class="table">
+      <thead><tr><th>Name</th><th>SLA Policy</th><th>Description</th><th>Created</th><th>Actions</th></tr></thead>
+      <tbody>
+        {% for c in clients %}
+        <tr>
+          <td><strong>{{ c.name }}</strong></td>
+          <td>
+            {% if c.active_sla and (c.response_time_hours or c.resolution_time_hours) %}
+              <span class="badge badge-success">Active</span>
+              {% if c.response_time_hours %}{{ c.response_time_hours }}h resp{% endif %}
+              {% if c.resolution_time_hours %}{% if c.response_time_hours %} / {% endif %}{{ c.resolution_time_hours }}h res{% endif %}
+              {% if c.business_hours_only %}<span class="text-muted text-sm"> (biz hrs)</span>{% endif %}
+            {% else %}
+              <span class="badge badge-ghost">Global</span>
+            {% endif %}
+          </td>
+          <td class="text-muted">{{ c.description or '—' }}</td>
+          <td class="text-muted text-sm">{{ c.created_at.strftime('%d %b %Y') if c.created_at else '—' }}</td>
+          <td class="actions-col">
+            <a href="{{ url_for('admin.edit_client', client_id=c.id) }}" class="btn btn-ghost btn-xs">Edit</a>
+            <form method="POST" action="{{ url_for('admin.delete_client', client_id=c.id) }}" style="display:inline" onsubmit="return confirm('Delete client &quot;{{ c.name }}&quot;? Users linked to this client will be unlinked.');">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+              <button type="submit" class="btn btn-ghost btn-xs btn-danger">Delete</button>
+            </form>
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="5"><div class="empty-state">
+          <div class="empty-icon" style="font-size:3rem;margin-bottom:.5rem;">🏢</div>
+          <div style="font-weight:600;margin-bottom:.25rem;">No clients found</div>
+          <div class="text-muted" style="margin-bottom:1rem;">Add your first client to get started.</div>
+          <a href="{{ url_for('admin.create_client') }}" class="btn btn-primary">+ Add Client</a>
+        </div></td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

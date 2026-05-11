@@ -24,6 +24,19 @@ def admin_or_engineer(f: Callable[..., Any]) -> Callable[..., Any]:
     return decorated
 
 
+@reports_bp.route('/sla')
+@login_required
+@admin_or_engineer
+def sla_report() -> str:
+    """SLA performance report: per client and monthly trend."""
+    from app.services.sla_service import get_client_sla_performance, get_monthly_sla_trend
+    client_perf = get_client_sla_performance()
+    monthly_trend = get_monthly_sla_trend()
+    return render_template('reports/sla.html',
+                           client_perf=client_perf,
+                           monthly_trend=monthly_trend)
+
+
 @reports_bp.route('/')
 @login_required
 @admin_or_engineer
@@ -45,6 +58,10 @@ def ticket_report() -> str:
     total = query.count()
     resolved = query.filter(Ticket.status.in_(['resolved', 'closed'])).count()
     breached = query.filter_by(sla_breached=True).count()
+    at_risk = query.filter(
+        Ticket.sla_state == 'at_risk',
+        Ticket.status.notin_(['resolved', 'closed'])
+    ).count()
 
     by_priority = dict(db.session.query(Ticket.priority, func.count(Ticket.id))
                        .filter(Ticket.created_at >= start_dt, Ticket.created_at < end_dt)
@@ -68,6 +85,7 @@ def ticket_report() -> str:
     return render_template('reports/tickets.html',
                            start=start, end=end,
                            total=total, resolved=resolved, breached=breached,
+                           at_risk=at_risk,
                            resolution_rate=round(resolved / total * 100, 1) if total else 0,
                            breach_rate=round(breached / total * 100, 1) if total else 0,
                            by_priority=by_priority,

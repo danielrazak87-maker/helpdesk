@@ -18,5 +18,10 @@
     <div class="report-title">Attendance Report</div>
     <p>Check-in/out history, working hours, and presence tracking.</p>
   </a>
+  <a href="{{ url_for('reports.sla_report') }}" class="report-card">
+    <div class="report-icon">⏱️</div>
+    <div class="report-title">SLA Report</div>
+    <p>Per-client SLA compliance, breach rates, and monthly trend analysis.</p>
+  </a>
 </div>
 {% endblock %}
