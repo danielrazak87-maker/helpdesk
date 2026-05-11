@@ -6,6 +6,7 @@ from app import db, csrf
 from app.models.ticket import Ticket, TicketComment, TICKET_STATUSES, TICKET_PRIORITIES
 from app.models.user import User
 from app.models.api_token import ApiToken
+from app.services.notification import notify_ticket_assigned, notify_ticket_updated
 from datetime import datetime
 
 api_bp = Blueprint('api', __name__, url_prefix='/api/v1')
@@ -143,6 +144,8 @@ def create_ticket():
             ticket.assigned_to = engineer.id
     db.session.commit()
 
+    notify_ticket_assigned(ticket)
+
     return jsonify({
         'id': ticket.id,
         'ticket_number': ticket.ticket_number,
@@ -164,6 +167,7 @@ def update_ticket(ticket_id):
 
     allowed_fields = ['status', 'assigned_to', 'priority']
     old_status = ticket.status
+    old_assigned = ticket.assigned_to
     for field in allowed_fields:
         if field in data:
             setattr(ticket, field, data[field])
@@ -180,6 +184,13 @@ def update_ticket(ticket_id):
         db.session.add(comment)
 
     db.session.commit()
+
+    # Send in-app + email notifications
+    if 'assigned_to' in data and data['assigned_to'] != old_assigned:
+        notify_ticket_assigned(ticket)
+    if 'status' in data:
+        notify_ticket_updated(ticket, user)
+
     return jsonify({'message': 'Ticket updated successfully'})
 
 @api_bp.route('/tickets/<int:ticket_id>', methods=['DELETE'])
