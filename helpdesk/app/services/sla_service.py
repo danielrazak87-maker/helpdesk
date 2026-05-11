@@ -8,6 +8,11 @@ from app.models.client import Client
 def _get_client_sla(ticket: Ticket):
     """Get the client SLA policy for a ticket by looking up the creator's client.
     Returns (response_hours, resolution_hours, business_hours_only) or None.
+
+    Applies SLA tier overrides based on ticket priority:
+      SLA 1 → critical priority (overrides resolution_time_hours)
+      SLA 2 → high priority (overrides resolution_time_hours)
+      SLA 3 → medium/low priority (overrides resolution_time_hours)
     """
     if not ticket.creator or not ticket.creator.client_id:
         return None
@@ -16,7 +21,26 @@ def _get_client_sla(ticket: Ticket):
         return None
     if not client.response_time_hours and not client.resolution_time_hours:
         return None
-    return (client.response_time_hours, client.resolution_time_hours, client.business_hours_only)
+
+    resp_hours = client.response_time_hours
+    res_hours = client.resolution_time_hours
+
+    # Apply SLA tier overrides based on ticket priority
+    sla_tier_map = {
+        'critical': 'sla1_time_hours',
+        'high': 'sla2_time_hours',
+        'medium': 'sla3_time_hours',
+        'low': 'sla3_time_hours',
+    }
+    if ticket.priority in sla_tier_map:
+        tier_field = sla_tier_map[ticket.priority]
+        tier_hours = getattr(client, tier_field, None)
+        if tier_hours is not None:
+            res_hours = float(tier_hours)
+
+    if not resp_hours and not res_hours:
+        return None
+    return (resp_hours, res_hours, client.business_hours_only)
 
 
 def calculate_deadline(created_at: datetime, hours: float, business_hours_only: bool = False) -> datetime:
