@@ -176,3 +176,9 @@ def send_password_reset_email(user: User, reset_url: str) -> None:
         body_text=text_body,
         body_html=html_body
     )
+
+def send_welcome_email(user, temp_password, login_url="https://reflects-manufacture-nonprofit-francis.trycloudflare.com/auth/login"):
+    """Send welcome email with temporary password to new user."""
+    subject = "Welcome to Kayfalah Helpdesk — Your Temporary Password"
+    body = render_template("email/welcome.html", user=user, temp_password=temp_password, login_url=login_url)
+    send_email(user.email, subject, body)

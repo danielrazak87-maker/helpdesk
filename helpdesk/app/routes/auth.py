@@ -6,6 +6,7 @@ from werkzeug.security import check_password_hash, generate_password_hash
 from itsdangerous import URLSafeTimedSerializer, SignatureExpired, BadSignature
 from datetime import datetime, timezone
 import re
+import secrets
 import qrcode
 import base64
 from io import BytesIO
@@ -17,7 +18,7 @@ def _utcnow() -> datetime:
     return datetime.now(timezone.utc).replace(tzinfo=None)
 from app.models.user import User
 from app.models.client import Client
-from app.services.notification import send_email, send_password_reset_email
+from app.services.notification import send_email, send_password_reset_email, send_welcome_email
 
 auth_bp = Blueprint('auth', __name__)
 
@@ -79,6 +80,9 @@ def login():
             user.last_login = _utcnow()
             db.session.commit()
             login_user(user, remember=remember)
+            if user.must_change_password:
+                flash('Please set a new password before continuing.', 'warning')
+                return redirect(url_for('auth.force_password_change'))
             next_page = request.args.get('next')
             flash(f'Welcome back, {user.full_name}!', 'success')
             return redirect(next_page or url_for('main.dashboard'))
@@ -137,22 +141,16 @@ def register():
 
     if request.method == 'POST':
         email = request.form.get('email', '').strip().lower()
-        password = request.form.get('password', '')
         full_name = request.form.get('full_name', '')
         project = request.form.get('project', '')
         client_id = request.form.get('client_id', '')
 
-        if not email or not password or not full_name or not project:
+        if not email or not full_name or not project:
             flash('All fields are required.', 'danger')
             return render_template('auth/register.html', clients=clients)
 
         if not validate_email(email):
             flash('Please enter a valid email address.', 'danger')
-            return render_template('auth/register.html', clients=clients)
-
-        error = validate_password_strength(password)
-        if error:
-            flash(error, 'danger')
             return render_template('auth/register.html', clients=clients)
 
         existing = User.query.filter_by(email=email).first()
@@ -167,9 +165,12 @@ def register():
             client_id=int(client_id) if client_id else None,
             role='user'
         )
-        user.set_password(password)
+        temp_password = secrets.token_urlsafe(12)
+        user.set_password(temp_password)
+        user.must_change_password = True
         db.session.add(user)
         db.session.commit()
+        send_welcome_email(user, temp_password)
 
         login_user(user)
         flash('Registration successful!', 'success')
@@ -303,6 +304,9 @@ def two_factor_challenge():
             user.last_login = _utcnow()
             db.session.commit()
             login_user(user, remember=remember)
+            if user.must_change_password:
+                flash('Please set a new password before continuing.', 'warning')
+                return redirect(url_for('auth.force_password_change'))
             next_page = request.args.get('next') or session.get('_2fa_next')
             flash(f'Welcome back, {user.full_name}!', 'success')
             return redirect(next_page or url_for('main.dashboard'))
@@ -353,6 +357,30 @@ def two_factor_setup():
                           secret=user.totp_secret,
                           backup_codes=[],
                           setup_done=False)
+
+
+@auth_bp.route('/force-password-change', methods=['GET', 'POST'])
+@login_required
+def force_password_change():
+    if request.method == 'POST':
+        new_password = request.form.get('new_password', '')
+        confirm = request.form.get('confirm_password', '')
+        if not new_password or not confirm:
+            flash('Both password fields are required.', 'danger')
+            return render_template('auth/force_password_change.html')
+        if new_password != confirm:
+            flash('Passwords do not match.', 'danger')
+            return render_template('auth/force_password_change.html')
+        error = validate_password_strength(new_password)
+        if error:
+            flash(error, 'danger')
+            return render_template('auth/force_password_change.html')
+        current_user.set_password(new_password)
+        current_user.must_change_password = False
+        db.session.commit()
+        flash('Password updated! Welcome to Kayfalah Helpdesk.', 'success')
+        return redirect(url_for('main.dashboard'))
+    return render_template('auth/force_password_change.html')
 
 
 @auth_bp.route('/2fa/disable', methods=['POST'])

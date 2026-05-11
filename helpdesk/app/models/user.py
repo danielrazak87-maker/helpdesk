@@ -26,6 +26,7 @@ class User(UserMixin, db.Model):
     created_at: Optional[datetime] = db.Column(db.DateTime, default=utcnow)
     last_login: Optional[datetime] = db.Column(db.DateTime)
     password_updated_at: Optional[datetime] = db.Column(db.DateTime)
+    must_change_password: bool = db.Column(db.Boolean, default=False, nullable=False)
 
     # 2FA fields
     totp_secret: Optional[str] = db.Column(db.String(32))
