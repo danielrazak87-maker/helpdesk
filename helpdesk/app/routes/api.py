@@ -158,10 +158,22 @@ def update_ticket(ticket_id):
     data = request.get_json()
 
     allowed_fields = ['status', 'assigned_to', 'priority']
+    old_status = ticket.status
     for field in allowed_fields:
         if field in data:
             setattr(ticket, field, data[field])
     ticket.updated_at = datetime.utcnow()
+
+    # Auto-comment on status change
+    if 'status' in data and data['status'] != old_status:
+        comment = TicketComment(
+            ticket_id=ticket_id,
+            user_id=user.id,
+            content=f"Status changed from '{old_status}' to '{data['status']}' by {user.full_name}",
+            is_internal=True
+        )
+        db.session.add(comment)
+
     db.session.commit()
     return jsonify({'message': 'Ticket updated successfully'})
 
