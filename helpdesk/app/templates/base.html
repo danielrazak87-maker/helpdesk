@@ -10,6 +10,37 @@
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
   <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}"/>
+  <!-- Custom Cursor Trail -->
+  <style>
+    .cursor-trail,
+    .cursor-trail-ring {
+      position: fixed;
+      pointer-events: none;
+      z-index: 9999;
+      border-radius: 50%;
+      transform: translate(-50%, -50%);
+      will-change: left, top;
+      opacity: 0;
+    }
+    .cursor-trail {
+      width: 6px;
+      height: 6px;
+      background: radial-gradient(circle, #f59e0b, #d97706);
+      box-shadow: 0 0 8px 2px rgba(245, 158, 11, 0.5);
+      transition: left 0.08s ease-out, top 0.08s ease-out, opacity 0.2s;
+    }
+    .cursor-trail-ring {
+      width: 12px;
+      height: 12px;
+      background: radial-gradient(circle, rgba(245, 158, 11, 0.3), transparent 70%);
+      box-shadow: 0 0 12px 3px rgba(245, 158, 11, 0.2);
+      transition: left 0.18s ease-out, top 0.18s ease-out, opacity 0.3s;
+    }
+    .cursor-trail.visible,
+    .cursor-trail-ring.visible {
+      opacity: 1;
+    }
+  </style>
   <script src="{{ url_for('static', filename='js/chart.umd.min.js') }}"
           onerror="var f=document.createElement('script');f.src='https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js';document.head.appendChild(f);this.onerror=null;">
   </script>
@@ -152,6 +183,53 @@
 </div>
 {% endif %}
 <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+
+<!-- Cursor Trail Script -->
+<script>
+(function() {
+  var dot = document.createElement('div');
+  dot.className = 'cursor-trail';
+  var ring = document.createElement('div');
+  ring.className = 'cursor-trail-ring';
+  document.body.appendChild(dot);
+  document.body.appendChild(ring);
+
+  var mx = -100, my = -100;
+  var raf = null;
+
+  function update() {
+    raf = null;
+    dot.style.left = mx + 'px';
+    dot.style.top = my + 'px';
+    ring.style.left = mx + 'px';
+    ring.style.top = my + 'px';
+  }
+
+  function onMove(e) {
+    mx = e.clientX;
+    my = e.clientY;
+    if (!raf) raf = requestAnimationFrame(update);
+  }
+
+  // Show trail only when mouse is over the page
+  function onEnter() {
+    dot.classList.add('visible');
+    ring.classList.add('visible');
+  }
+  function onLeave() {
+    dot.classList.remove('visible');
+    ring.classList.remove('visible');
+  }
+
+  document.addEventListener('mousemove', onMove, { passive: true });
+  document.addEventListener('mouseenter', onEnter);
+  document.addEventListener('mouseleave', onLeave);
+  // Show immediately if mouse is already over page
+  if (document.querySelector(':hover') !== null) {
+    onEnter();
+  }
+})();
+</script>
 
 {% block scripts %}{% endblock %}
 </body>
